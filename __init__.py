@@ -74,16 +74,16 @@ class Rule():
         self._ext = ext
 
         self._output           = None
-        self._implicit         = None
-        self._implicit_outputs = None
+        self._implicit         = []
+        self._implicit_outputs = []
         self._pool             = None
         self._variables        = {}
 
-    def ext(self, ext)                          : self._ext              = ext              ; return self
-    def output(self, output)                    : self._output           = output           ; return self
-    def implicit(self, implicit)                : self._implicit         = implicit         ; return self
-    def implicit_outputs(self, implicit_outputs): self._implicit_outputs = implicit_outputs ; return self
-    def pool(self, pool)                        : self._pool             = pool             ; return self
+    def ext(self, ext)                          : self._ext               = ext              ; return self
+    def output(self, output)                    : self._output            = output           ; return self
+    def implicit(self, implicit)                : self._implicit         += implicit         ; return self
+    def implicit_outputs(self, implicit_outputs): self._implicit_outputs += implicit_outputs ; return self
+    def pool(self, pool)                        : self._pool              = pool             ; return self
     def variables(self, **variables):
         # Merge the two dictionaries
         self._variables = { **self._variables, **variables }
@@ -221,13 +221,16 @@ class KProject(ninja.ninja_syntax.Writer):
                         ) \
                    .variables(tangle_selector = tangle_selector) \
 
-    def kompile(self):
+    def kompile(self, backend):
         self.rule( 'kompile'
                  , description = 'Kompiling $in ($backend)'
                  , command     = '$k_bindir/kompile --backend $backend --debug $flags '
                                + '--directory $$(dirname $$(dirname $out)) $in'
                  )
-        return KompileRule().implicit(['ocaml-deps'])
+        ret = KompileRule().variables(backend = backend)
+        if backend == 'ocaml':
+            ret.implicit(['ocaml-deps'])
+        return ret
 
     def kdefinition_no_build(self, name, kompiled_dirname, alias):
         return KDefinition(self, name, self.builddir(name), kompiled_dirname, alias)
