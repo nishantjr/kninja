@@ -65,8 +65,17 @@ more detailed example can be found here
                          .variables( backend   = 'java'
                                    , directory = proj.builddir('mydef')
                                    ))
-                                   
-   
+
+   def mydef_test(file, expected):                                                                              
+       proj.source(file) \
+           .then(mydef.krun()) \
+           .then(proj.check(proj.source(expected))
+                        .variables(flags = '--ignore-all-space')) \
+           .default()
+
+   mydef_test('t/foo.mydef',  't/foo.mydef.expected')
+   mydef_test('t/bar.mydef',  't/bar.mydef.expected')
+   mydef_test('t/buzz.mydef', 't/buzz.mydef.expected')
    ```
 
 3. Add a script (typically called `build`) at the top-level of your project:
