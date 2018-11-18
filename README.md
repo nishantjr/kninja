@@ -1,8 +1,9 @@
 KNinja is a python-based generator intended to ease the startup time for K
 projects. We'd like the setup time for projects not using advanced compilation
 features (such as plugins for the OCaml and LLVM backends) to be as cheap as
-possible. KNinja is a bit opinionated in the directory layout of the project
-(but allows for some configuration via ninja variables).
+possible, while still simplifying common advanced usage patterns. KNinja is a
+bit opinionated in the directory layout of the project (but allows for some
+configuration via ninja variables).
 
 Overview
 ========
