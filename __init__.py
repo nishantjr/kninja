@@ -54,7 +54,7 @@ class KDefinition(Target):
                              , ext = 'krun'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit(self.path)
+                             .implicit([self.path])
 
     def kast(self):
         return self.proj.rule( 'kast'
@@ -63,8 +63,7 @@ class KDefinition(Target):
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit(self.path)
-
+                             .implicit([self.path])
 
 class Rule():
     def __init__(self, name, description, command, ext = None):
