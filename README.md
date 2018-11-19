@@ -62,10 +62,8 @@ more detailed example can be found here
    proj = KProject()
    mydef = proj.source('mydef.md') \
                .then(proj.tangle().output(proj.tangleddir('mydef.k')))
-               .then(proj.kompile()
-                         .variables( backend   = 'java'
-                                   , directory = proj.builddir('mydef')
-                                   ))
+               .then(proj.kompile(backend = 'java') \
+                         .variables(directory = proj.builddir('mydef')))
 
    def mydef_test(file, expected):                                                                              
        proj.source(file) \
@@ -82,6 +80,8 @@ more detailed example can be found here
 3. Add a script (typically called `build`) at the top-level of your project:
 
    ```
+   #!/usr/bin/env bash
+
    set -eu
    base="$(cd "$(dirname "$0")"; pwd)"
    type -t ninja > /dev/null || fail "`ninja-build` not available. Giving up."
@@ -90,13 +90,19 @@ more detailed example can be found here
    python3 lib/build.py
    exec ninja -f .build/generated.ninja "$@"
    ```
-   
+
+   Make executable: `chmod +x lib/build.py`
+
 Things we'd like
 ================
+
+-   (easy) `implicit`, `implicit_outputs` etc should allow taking strings and
+    targets in addition to lists.
 
 -   Allow composing rules in to new rule: This will remove the need to define
     auxilary functions (which tend to have a different interface from rules) for
     composing rules together.
+
 -   The `kompile` object returns a special target: a `KDefinition`.
     `KDefinition` have most of the information needed to run a program. This
     could be used to define an easy interface for running these programs with
