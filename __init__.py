@@ -54,7 +54,7 @@ class KDefinition(Target):
                              , ext = 'krun'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit([self.path])
+                             .implicit([self.path, self.proj.build_k()])
 
     def kast(self):
         return self.proj.rule( 'kast'
@@ -63,7 +63,7 @@ class KDefinition(Target):
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit([self.path])
+                             .implicit([self.path, self.proj.build_k()])
 
 class Rule():
     def __init__(self, name, description, command, ext = None):
@@ -136,6 +136,7 @@ class KProject(ninja.ninja_syntax.Writer):
         self.generate_ninja()
 
         self.written_rules = {}
+        self._build_k = None
 
 # Directory Layout
 # ================
@@ -191,12 +192,6 @@ class KProject(ninja.ninja_syntax.Writer):
         self.variable('k_repository', self.krepodir())
         self.variable('k_bindir', self.kbindir())
         self.variable('tangle_repository', self.extdir('pandoc-tangle'))
-        self.build_k()
-
-    def build_k(self):
-        self.build(self.krepodir(".git"), "git-submodule-init")
-        self.build(self.kbindir("kompile"), "build-k", self.krepodir(".git"))
-        self.build(self.extdir('pandoc-tangle', ".git"), "git-submodule-init")
 
     def build_ocaml(self):
         self.include(self.kninjadir('build-ocaml.ninja'))
@@ -220,13 +215,29 @@ class KProject(ninja.ninja_syntax.Writer):
                         ) \
                    .variables(tangle_selector = tangle_selector) \
 
+    def build_k(self):
+        if not(self._build_k):
+            # TODO: This is a hack. `then` should be moved to KProject, and take
+            # a list of targets (so that a build edge can have zero, one or many outputs)
+            # and a rule.
+            nullTarget = Target(self, '')
+            rule = self.rule( 'build-k'
+                            , description = 'Building K'
+                            , command = 'cd $k_repository && mvn package -q -DskipTests'
+                            ) \
+                            .output('$k_bindir/kompile') \
+                            .implicit_outputs(['$k_bindir/krun', '$k_bindir/kast'])
+            self._build_k = nullTarget.then(rule)
+        return self._build_k
+
+
     def kompile(self, backend):
         self.rule( 'kompile'
                  , description = 'Kompiling $in ($backend)'
                  , command     = '$k_bindir/kompile --backend $backend --debug $flags '
                                + '--directory $$(dirname $$(dirname $out)) $in'
                  )
-        ret = KompileRule().variables(backend = backend)
+        ret = KompileRule().variables(backend = backend).implicit([self.build_k()])
         if backend == 'ocaml':
             ret.implicit(['ocaml-deps'])
         return ret

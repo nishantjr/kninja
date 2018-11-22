@@ -19,10 +19,6 @@ rule git-submodule-init
 # Building K
 # ----------
 
-rule build-k
-    description     = Building K
-    command         = cd $k_repository && mvn package -q -DskipTests
-
 rule opam-build-ocamlc-k
     description     = Building ocamlc+k
     command         = $
