@@ -65,6 +65,17 @@ class KDefinition(Target):
                              .variables(directory = self.directory()) \
                              .implicit([self.path, self.proj.build_k()])
 
+    def kprove(self):
+        # The kprove command `cat`s its output after failing for convenience.
+        # I'm not sure if there is a better way.
+        return self.proj.rule( 'kast'
+                             , description = 'kprove $in ($directory)'
+                             , command     = '"$k_bindir/kprove" $flags --directory "$directory" "$in" > "$out" || (cat "$out"; false)'
+                             , ext = 'kprove'
+                             ) \
+                             .variables(directory = self.directory()) \
+                             .implicit([self.path, self.proj.build_k()])
+
 class Rule():
     def __init__(self, name, description, command, ext = None):
         self.name = name
