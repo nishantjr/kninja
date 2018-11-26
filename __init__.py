@@ -11,6 +11,7 @@ class Target():
     def __init__(self, proj, path):
         self.proj = proj
         self.path = path
+        self._alias = None
 
     def __str__(self):
         return self.path
@@ -20,6 +21,7 @@ class Target():
         return rule.build_edge(self.proj, self, target)
 
     def alias(self, alias):
+        self._alias = alias
         self.proj.build(alias, 'phony', self.path)
         return self
 
@@ -48,10 +50,12 @@ class KDefinition(Target):
         return os.path.join(self._directory, *path)
 
     def krun(self, krun_flags = None):
+        if self._alias: ext = self._alias
+        else:           ext = 'krun'
         return self.proj.rule( 'krun'
                              , description = 'Running $in ($directory)'
                              , command = '$k_bindir/krun $flags --debug --directory $directory $in > $out'
-                             , ext = 'krun'
+                             , ext = ext
                              ) \
                              .variables(directory = self.directory()) \
                              .implicit([self.path, self.proj.build_k()])
