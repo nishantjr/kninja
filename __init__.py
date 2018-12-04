@@ -199,7 +199,6 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def generate_ninja(self):
         self.comment('This is a generated file')
-        self.include(self.kninjadir("prelude.ninja"))
         self.newline()
         self.variable('builddir', self.builddir())
         # TODO: Remove underscores for consistancy
@@ -208,9 +207,8 @@ class KProject(ninja.ninja_syntax.Writer):
         self.variable('k_bindir', self.kbindir())
         self.variable('tangle_repository', self.extdir('pandoc-tangle'))
 
-    def build_ocaml(self):
+        self.include(self.kninjadir("prelude.ninja"))
         self.include(self.kninjadir('build-ocaml.ninja'))
-        self.default('ocaml-deps')
 
     def rule(self, name, description, command, ext = None):
         rule = Rule(name, description, command, ext)

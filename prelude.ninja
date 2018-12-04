@@ -19,13 +19,14 @@ rule git-submodule-init
 # Building K
 # ----------
 
+ocaml_version=4.06.1+k
 rule opam-build-ocamlc-k
     description     = Building ocamlc+k
     command         = $
-      opam init --quiet --no-setup --yes --compiler 4.06.1+k                                  && $
-      ( opam repository add k "$k_repository/k-distribution/target/release/k/lib/opam"        || $
-        opam repository set-url k "$k_repository/k-distribution/target/release/k/lib/opam" )  && $
-      opam update                                                                             && $
+      (  opam repository add     --yes --set-default --all-switches k "$k_repository/k-distribution/target/release/k/lib/opam" $
+      || opam repository set-url --yes --set-default --all-switches k "$k_repository/k-distribution/target/release/k/lib/opam" ) && $
+      ( opam switch remove --yes $ocaml_version || true) && $
+      opam switch create --yes $ocaml_version --repos=default,k && $
       touch -c $out
     pool            = opam
 

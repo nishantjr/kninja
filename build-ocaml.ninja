@@ -1,11 +1,14 @@
-build $opam_root/4.03.0+k/bin/ocamlc : opam-build-ocamlc-k $k_bindir/kompile
-build $opam_root/4.03.0+k/lib/cryptokit/opam.config : opam-install $opam_root/4.03.0+k/bin/ocamlc
+build $opam_root/$ocaml_version.timestamp : opam-build-ocamlc-k $k_bindir/kompile
+build $opam_root/$ocaml_version/lib/cryptokit/opam : opam-install $opam_root/$ocaml_version.timestamp
     package = cryptokit
-build $opam_root/4.03.0+k/lib/mlgmp/opam.config : opam-install $opam_root/4.03.0+k/bin/ocamlc
+build $opam_root/$ocaml_version/lib/mlgmp/opam : opam-install $opam_root/$ocaml_version.timestamp
     package = mlgmp
-build $opam_root/4.03.0+k/lib/uuidm/opam.config : opam-install $opam_root/4.03.0+k/bin/ocamlc
+build $opam_root/$ocaml_version/lib/uuidm/opam : opam-install $opam_root/$ocaml_version.timestamp
     package = uuidm
+build $opam_root/$ocaml_version/lib/ocamlfind/opam : opam-install $opam_root/$ocaml_version.timestamp
+    package = ocamlfind
 
-build ocaml-deps : phony $opam_root/4.03.0+k/lib/cryptokit/opam.config $
-                         $opam_root/4.03.0+k/lib/mlgmp/opam.config     $
-                         $opam_root/4.03.0+k/lib/uuidm/opam.config
+build ocaml-deps : phony $opam_root/$ocaml_version/lib/cryptokit/opam $
+                         $opam_root/$ocaml_version/lib/mlgmp/opam     $
+                         $opam_root/$ocaml_version/lib/ocamlfind/opam $
+                         $opam_root/$ocaml_version/lib/uuidm/opam
