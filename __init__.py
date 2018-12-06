@@ -1,6 +1,7 @@
 import kninja.ninja.ninja_syntax
 import os
 import sys
+import copy
 
 def basename_no_ext(path):
     return os.path.splitext(os.path.basename(path))[0]
@@ -41,15 +42,18 @@ class Target():
             return value.path
 
 class KDefinition(Target):
-    def __init__(self, proj, kompiled_dirname, target):
+    def __init__(self, proj, kompiled_dirname, target, krun_flags = ''):
         self._directory = os.path.dirname(kompiled_dirname)
-        assert(self.directory(os.path.basename(kompiled_dirname), 'timestamp') == target)
+        self._krun_flags = krun_flags
+        assert os.path.dirname(target) == kompiled_dirname \
+             , "target must be a file in the kompiled dir\n\n\ttarget = %s\n\tkompiled_dirname = %s" \
+               % (target, kompiled_dirname)
         super().__init__(proj, target)
 
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def krun(self, krun_flags = None):
+    def krun(self, krun_flags = ''):
         if self._alias: ext = self._alias
         else:           ext = 'krun'
         return self.proj.rule( 'krun'
@@ -57,7 +61,9 @@ class KDefinition(Target):
                              , command = '$k_bindir/krun $flags --debug --directory $directory $in > $out'
                              , ext = ext
                              ) \
-                             .variables(directory = self.directory()) \
+                             .variables( directory = self.directory()
+                                       , flags = self._krun_flags + ' ' + krun_flags
+                                       ) \
                              .implicit([self.path, self.proj.build_k()])
 
     def kast(self):
@@ -93,15 +99,16 @@ class Rule():
         self._pool             = None
         self._variables        = {}
 
-    def ext(self, ext)                          : self._ext               = ext              ; return self
-    def output(self, output)                    : self._output            = output           ; return self
-    def implicit(self, implicit)                : self._implicit         += implicit         ; return self
-    def implicit_outputs(self, implicit_outputs): self._implicit_outputs += implicit_outputs ; return self
-    def pool(self, pool)                        : self._pool              = pool             ; return self
+    def ext(self, ext)                          : r = copy.copy(self); r._ext               = ext              ; return r
+    def output(self, output)                    : r = copy.copy(self); r._output            = output           ; return r
+    def implicit(self, implicit)                : r = copy.copy(self); r._implicit         += implicit         ; return r
+    def implicit_outputs(self, implicit_outputs): r = copy.copy(self); r._implicit_outputs += implicit_outputs ; return r
+    def pool(self, pool)                        : r = copy.copy(self); r._pool              = pool             ; return r
     def variables(self, **variables):
+        r = copy.copy(self)
         # Merge the two dictionaries
-        self._variables = { **self._variables, **variables }
-        return self
+        r._variables = { **self._variables, **variables }
+        return r
 
     def get_build_edge_target_path(self, source):
         if self._output: return self._output
@@ -125,13 +132,11 @@ class KompileRule(Rule):
     def __init__(self):
         super().__init__('kompile', 'foo', 'bar')
 
-    def output(self, output):
-        raise ValueError("Cannot set ouput for Kompile -- use the directory variable instead")
-
     def kompiled_dirname(self, source):
         return self._variables.get('directory') + '/' + basename_no_ext(source.path) + '-kompiled'
 
     def get_build_edge_target_path(self, source):
+        if self._output: return self._output
         return  self.kompiled_dirname(source) + '/timestamp'
 
     def build_edge(self, proj, source, target):
@@ -243,20 +248,72 @@ class KProject(ninja.ninja_syntax.Writer):
             self._build_k = nullTarget.then(rule)
         return self._build_k
 
+    def kompile_rule(self):
+        self.rule( 'kompile'
+                         , description = 'Kompiling $in ($backend)'
+                         , command     = '$k_bindir/kompile --backend "$backend" --debug $flags '
+                                       + '--directory "$directory" $in'
+                         )
+        return KompileRule()
 
     def kompile(self, backend):
-        self.rule( 'kompile'
-                 , description = 'Kompiling $in ($backend)'
-                 , command     = '$k_bindir/kompile --backend $backend --debug $flags '
-                               + '--directory $$(dirname $$(dirname $out)) $in'
-                 )
-        ret = KompileRule().variables(backend = backend).implicit([self.build_k()])
+        ret = self.kompile_rule().variables(backend = backend).implicit([self.build_k()])
         if backend == 'ocaml':
             ret.implicit(['ocaml-deps'])
         return ret
 
-    def kdefinition_no_build(self, name, kompiled_dirname, alias):
-        return KDefinition(self, name, self.builddir(name), kompiled_dirname, alias)
+    # TODO: To have the same interface as kompile, `.then()` needs to allow
+    # taking a list of rules rather than a single one.
+    def kompile_interpreter( self, main_file, directory
+                           , additional_ml_sources = []
+                           , kompile_flags = ""
+                           , ocamlfind_flags = ""
+                           , packages = []
+                           ):
+        kompile_flags += " --gen-ml-only"
+        kompiledir_ml_sources_1 = [ 'constants.ml'
+                                  , 'prelude.ml'
+                                  , 'plugin.ml'
+                                  ]
+        kompiledir_ml_sources_2 = [ 'realdef.ml'
+                                  , 'parser.mli'
+                                  , 'parser.ml'
+                                  , 'lexer.ml'
+                                  , 'run.ml'
+                                  ]
+        kompile = self.kompile_rule().variables( flags = kompile_flags
+                                               , backend = 'ocaml'
+                                               , directory = directory
+                                               ).implicit([self.build_k()])
+        kompiled_dirname = kompile.kompiled_dirname(main_file)
+        def prefix_with_kompiled_dir(f):
+            return os.path.join(kompiled_dirname, f)
+        ml_sources = list(map(prefix_with_kompiled_dir, kompiledir_ml_sources_1)) \
+                   + additional_ml_sources \
+                   + list(map(prefix_with_kompiled_dir, kompiledir_ml_sources_2))
+        realdef_cmx  = os.path.join(kompiled_dirname, 'realdef.cmx')
+        realdef_cmo = os.path.join(kompiled_dirname, 'realdef.cmxs')
+        package_flags = map(lambda p: '-package ' + p + ' ', packages)
+        ocaml_find = self.rule( 'ocamlfind'
+                              , description = 'ocamlfind $out'
+                              , command = 'ocamlfind opt -o $out $flags $in'
+                              )
+        interpreter = main_file.then(kompile.output(kompiled_dirname + '/interpreter.ml')) \
+                     .then(ocaml_find.variables(flags = '-g -w -11-26 -linkpkg '
+                                                      + '-I ' + kompiled_dirname + ' '
+                                                      + '-I ext/blockchain-k-plugin/plugin '
+                                                      + '-I ext/blockchain-k-plugin/ '
+                                                      + ' '.join(package_flags)
+                                                      + ' -linkpkg -linkall -thread -safe-string '
+                                                      + ' '.join(Target.to_paths(ml_sources))
+                                                ) \
+                                     .implicit(['ocaml-deps']) \
+                                     .output(os.path.join(kompiled_dirname, 'interpreter')) \
+                                     .implicit_outputs([realdef_cmx])
+                          )
+        t = self.source(realdef_cmx) \
+            .then( ocaml_find.variables(flags = '-shared').output(realdef_cmo) )
+        return KDefinition(self, kompiled_dirname, t.path, krun_flags = '--interpret')
 
     def check(self, expected):
         return self.rule( 'check-test-result'
