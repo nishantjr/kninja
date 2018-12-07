@@ -108,3 +108,11 @@ Things we'd like
     could be used to define an easy interface for running these programs with
     invocation sepefic options (e.g.
     `./build krun-plutus t/my-program --debugger`). (Really, this could work for any rule?)
+
+Bugs
+====
+
+*   Rules should be immutable:
+    `Target.{outputs, implicit, implicit_outputs, ...}` should return an updated
+    copy rather than modifying the original rule. This will prevent these
+    from accidentally being shared by different targets.

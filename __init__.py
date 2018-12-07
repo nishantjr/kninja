@@ -262,6 +262,12 @@ class KProject(ninja.ninja_syntax.Writer):
             ret.implicit(['ocaml-deps'])
         return ret
 
+    def ocamlfind(self):
+        return self.rule( 'ocamlfind'
+                        , description = 'ocamlfind $out'
+                        , command = 'ocamlfind opt -o $out $flags $in'
+                        )
+
     # TODO: To have the same interface as kompile, `.then()` needs to allow
     # taking a list of rules rather than a single one.
     def kompile_interpreter( self, main_file, directory
@@ -294,25 +300,21 @@ class KProject(ninja.ninja_syntax.Writer):
         realdef_cmx  = os.path.join(kompiled_dirname, 'realdef.cmx')
         realdef_cmo = os.path.join(kompiled_dirname, 'realdef.cmxs')
         package_flags = map(lambda p: '-package ' + p + ' ', packages)
-        ocaml_find = self.rule( 'ocamlfind'
-                              , description = 'ocamlfind $out'
-                              , command = 'ocamlfind opt -o $out $flags $in'
-                              )
         interpreter = main_file.then(kompile.output(kompiled_dirname + '/interpreter.ml')) \
-                     .then(ocaml_find.variables(flags = '-g -w -11-26 -linkpkg '
-                                                      + '-I ' + kompiled_dirname + ' '
-                                                      + '-I ext/blockchain-k-plugin/plugin '
-                                                      + '-I ext/blockchain-k-plugin/ '
-                                                      + ' '.join(package_flags)
-                                                      + ' -linkpkg -linkall -thread -safe-string '
-                                                      + ' '.join(Target.to_paths(ml_sources))
+                     .then(self.ocamlfind().variables(flags = '-g -w -11-26 -linkpkg '
+                                                            + '-I ' + kompiled_dirname + ' '
+                                                            + '-I ext/blockchain-k-plugin/plugin '
+                                                            + '-I ext/blockchain-k-plugin/ '
+                                                            + ' '.join(package_flags)
+                                                            + ' -linkpkg -linkall -thread -safe-string '
+                                                            + ' '.join(Target.to_paths(ml_sources))
                                                 ) \
                                      .implicit(['ocaml-deps']) \
                                      .output(os.path.join(kompiled_dirname, 'interpreter')) \
                                      .implicit_outputs([realdef_cmx])
                           )
         t = self.source(realdef_cmx) \
-            .then( ocaml_find.variables(flags = '-shared').output(realdef_cmo) )
+            .then( self.ocamlfind().variables(flags = '-shared').output(realdef_cmo) )
         return KDefinition(self, kompiled_dirname, t.path, krun_flags = '--interpret')
 
     def check(self, expected):
