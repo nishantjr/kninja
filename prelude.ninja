@@ -1,3 +1,6 @@
+ninja_required_version = 1.7
+
+
 # For use with python generators
 # ------------------------------
 
