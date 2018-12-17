@@ -225,6 +225,13 @@ class KProject(ninja.ninja_syntax.Writer):
     def source(self, path):
         return Target(self, path)
 
+    # fake target, for when a build-edge has no inputs
+    # TODO: This is a hack. `then` should be moved to KProject, and take
+    # a list of targets (so that a build edge can have zero, one or many outputs)
+    # and a rule.
+    def dotTarget(self):
+        return Target(self, '')
+
     def tangle(self, tangle_selector = '.k'):
         return self.rule( 'tangle',
                           description = 'Tangling $in',
@@ -235,17 +242,13 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def build_k(self):
         if not(self._build_k):
-            # TODO: This is a hack. `then` should be moved to KProject, and take
-            # a list of targets (so that a build edge can have zero, one or many outputs)
-            # and a rule.
-            nullTarget = Target(self, '')
             rule = self.rule( 'build-k'
                             , description = 'Building K'
                             , command = 'cd $k_repository && mvn package -q -DskipTests'
                             ) \
                             .output('$k_bindir/kompile') \
                             .implicit_outputs(['$k_bindir/krun', '$k_bindir/kast'])
-            self._build_k = nullTarget.then(rule)
+            self._build_k = self.dotTarget().then(rule)
         return self._build_k
 
     def kompile_rule(self):
