@@ -241,7 +241,7 @@ class KProject(ninja.ninja_syntax.Writer):
             nullTarget = Target(self, '')
             rule = self.rule( 'build-k'
                             , description = 'Building K'
-                            , command = 'cd $k_repository && mvn package -q -DskipTests'
+                            , command = 'cd $k_repository && mvn package -q -DskipTests -Dllvm.backend.skip -Dhaskell.backend.skip'
                             ) \
                             .output('$k_bindir/kompile') \
                             .implicit_outputs(['$k_bindir/krun', '$k_bindir/kast'])
