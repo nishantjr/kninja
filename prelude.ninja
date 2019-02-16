@@ -22,7 +22,7 @@ rule git-submodule-init
 # Building K
 # ----------
 
-ocaml_version=4.03.0+k
+ocaml_version=4.06.1+k
 rule opam-build-ocamlc-k
     description     = Building ocamlc+k
     command         = $
