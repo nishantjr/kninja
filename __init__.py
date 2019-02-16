@@ -64,7 +64,7 @@ class KDefinition(Target):
                              .variables( directory = self.directory()
                                        , flags = self._krun_flags + ' ' + krun_flags
                                        ) \
-                             .implicit([self.path, self.proj.build_k()])
+                             .implicit([self.path])
 
     def kast(self):
         return self.proj.rule( 'kast'
@@ -73,7 +73,7 @@ class KDefinition(Target):
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit([self.path, self.proj.build_k()])
+                             .implicit([self.path])
 
     def kprove(self):
         # The kprove command `cat`s its output after failing for convenience.
@@ -84,7 +84,7 @@ class KDefinition(Target):
                              , ext = 'kprove'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit([self.path, self.proj.build_k()])
+                             .implicit([self.path])
 
 class Rule():
     def __init__(self, name, description, command, ext = None):
@@ -150,13 +150,13 @@ class KompileRule(Rule):
 
 class KProject(ninja.ninja_syntax.Writer):
     def __init__(self):
+        self.written_rules = {}
+        self._backend_targets =  dict(java=None, ocaml=None, haskell=None, llvm=None)
+
         if not os.path.exists(self.builddir()):
             os.mkdir(self.builddir())
         super().__init__(open(self.builddir('generated.ninja'), 'w'))
         self.generate_ninja()
-
-        self.written_rules = {}
-        self._build_k = None
 
 # Directory Layout
 # ================
@@ -240,16 +240,33 @@ class KProject(ninja.ninja_syntax.Writer):
                         ) \
                    .variables(tangle_selector = tangle_selector) \
 
-    def build_k(self):
-        if not(self._build_k):
-            rule = self.rule( 'build-k'
-                            , description = 'Building K'
-                            , command = 'cd $k_repository && mvn package -q -DskipTests'
-                            ) \
-                            .output('$k_bindir/kompile') \
-                            .implicit_outputs(['$k_bindir/krun', '$k_bindir/kast'])
-            self._build_k = self.dotTarget().then(rule)
-        return self._build_k
+    def rule_build_k(self, backend):
+        flags = ''
+        implicit = []
+        if backend == 'ocaml':
+            implicit += ['ocaml-deps']
+            flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
+        if backend == 'java':
+            flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
+        if backend == 'haskell':
+            flags = '-Dllvm.backend.skip'
+        if backend == 'llvm':
+            flags = '-Dhaskell.backend.skip'
+        return self.rule( 'build-k'
+                        , description = 'Building K'
+                        , command =    '(  cd $k_repository ' +
+                                       '&& mvn package -q -DskipTests $flags' +
+                                       ')' +
+                                    '&& touch $out'
+                        ) \
+                   .output('$builddir/kbackend-' + backend) \
+                   .implicit(implicit) \
+                   .variables(flags = flags)
+
+    def build_k(self, backend):
+        if not(self._backend_targets[backend]):
+            self._backend_targets[backend] = self.dotTarget().then(self.rule_build_k(backend))
+        return self._backend_targets[backend]
 
     def kompile_rule(self):
         self.rule( 'kompile'
@@ -260,9 +277,7 @@ class KProject(ninja.ninja_syntax.Writer):
         return KompileRule()
 
     def kompile(self, backend):
-        ret = self.kompile_rule().variables(backend = backend).implicit([self.build_k()])
-        if backend == 'ocaml':
-            ret.implicit(['ocaml-deps'])
+        ret = self.kompile_rule().variables(backend = backend).implicit([self.build_k(backend)])
         return ret
 
     def ocamlfind(self):
