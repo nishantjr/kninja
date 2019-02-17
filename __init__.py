@@ -1,3 +1,16 @@
+"""
+
+KNinja (and Ninja's) build definitions form a labelled multigraph where:
+
+-   The nodes are targets: generally files, but can also be phoney targets
+-   The labels are rules: A command to run, parameterised over a set of
+    variables.
+-   The edges (called build edges): specify how to build one or more targets
+    from zero or more inputs. Edges allow setting values for
+    variables used in their label.
+
+"""
+
 import kninja.ninja.ninja_syntax
 import os
 import sys
@@ -53,13 +66,14 @@ class KDefinition(Target):
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def krun(self, krun_flags = ''):
-        if self._alias: ext = self._alias
-        else:           ext = 'krun'
+    def krun(self, krun_flags = '', extension = None):
+        if not(extension):
+            if self._alias: extension = self._alias
+            else:           extension = 'krun'
         return self.proj.rule( 'krun'
                              , description = 'Running $in ($directory)'
                              , command = '$k_bindir/krun $flags --debug --directory $directory $in > $out'
-                             , ext = ext
+                             , ext = extension
                              ) \
                              .variables( directory = self.directory()
                                        , flags = self._krun_flags + ' ' + krun_flags
@@ -92,7 +106,6 @@ class Rule():
         self.description = description
         self.command = command
         self._ext = ext
-
         self._output           = None
         self._implicit         = []
         self._implicit_outputs = []
@@ -108,6 +121,10 @@ class Rule():
         r = copy.copy(self)
         # Merge the two dictionaries
         r._variables = { **self._variables, **variables }
+        return r
+    def variable(self, name, value):
+        r = copy.copy(self)
+        r._variables[name] = value
         return r
 
     def get_build_edge_target_path(self, source):
@@ -157,6 +174,28 @@ class KProject(ninja.ninja_syntax.Writer):
             os.mkdir(self.builddir())
         super().__init__(open(self.builddir('generated.ninja'), 'w'))
         self.generate_ninja()
+
+    """ High level interface """
+
+    def tangle(self, input_path):
+        input_target = self.source(input_path)
+        (prefix, dot, old_extension) = input_path.rpartition('.')
+        output = prefix + '.k'
+        return input_target.then(self.rule_tangle().output(output))
+
+    def definition( self
+                  , backend
+                  , main
+                  , directory
+                  , flags
+                  , alias
+                  , other = []
+                  ):
+        return main.then(self.kompile(backend = backend)       \
+                             .implicit(other)                  \
+                             .variable('directory', directory) \
+                             .variable('flags', flags)         \
+                        ).alias(alias)
 
 # Directory Layout
 # ================
@@ -232,12 +271,12 @@ class KProject(ninja.ninja_syntax.Writer):
     def dotTarget(self):
         return Target(self, '')
 
-    def tangle(self, tangle_selector = '.k'):
+    def rule_tangle(self, tangle_selector = '.k', ext = 'k'):
         return self.rule( 'tangle',
                           description = 'Tangling $in',
                           command     = 'LUA_PATH=$tangle_repository/?.lua '
                                       + 'pandoc $in -o $out --metadata=code:$tangle_selector --to "$tangle_repository/tangle.lua"'
-                        ) \
+                        ).ext('k') \
                    .variables(tangle_selector = tangle_selector) \
 
     def rule_build_k(self, backend):
@@ -268,16 +307,16 @@ class KProject(ninja.ninja_syntax.Writer):
             self._backend_targets[backend] = self.dotTarget().then(self.rule_build_k(backend))
         return self._backend_targets[backend]
 
-    def kompile_rule(self):
+    def rule_kompile(self):
         self.rule( 'kompile'
-                         , description = 'Kompiling $in ($backend)'
-                         , command     = '$k_bindir/kompile --backend "$backend" --debug $flags '
-                                       + '--directory "$directory" $in'
-                         )
+                 , description = 'Kompiling $in ($backend)'
+                 , command     = '$k_bindir/kompile --backend "$backend" --debug $flags '
+                               + '--directory "$directory" $in'
+                 )
         return KompileRule()
 
     def kompile(self, backend):
-        ret = self.kompile_rule().variables(backend = backend).implicit([self.build_k(backend)])
+        ret = self.rule_kompile().variables(backend = backend).implicit([self.build_k(backend)])
         return ret
 
     def ocamlfind(self):
@@ -305,7 +344,7 @@ class KProject(ninja.ninja_syntax.Writer):
                                   , 'lexer.ml'
                                   , 'run.ml'
                                   ]
-        kompile = self.kompile_rule().variables( flags = kompile_flags
+        kompile = self.rule_kompile().variables( flags = kompile_flags
                                                , backend = 'ocaml'
                                                , directory = directory
                                                ).implicit([self.build_k()])
