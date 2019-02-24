@@ -166,9 +166,10 @@ class KompileRule(Rule):
 # A KProject manages a single `ninja` build file.
 
 class KProject(ninja.ninja_syntax.Writer):
-    def __init__(self):
+    def __init__(self, extdir = 'ext'):
         self.written_rules = {}
         self._backend_targets =  dict(java=None, ocaml=None, haskell=None, llvm=None)
+        self._extdir = extdir
 
         if not os.path.exists(self.builddir()):
             os.mkdir(self.builddir())
@@ -208,7 +209,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
 # Directory for storing submodules used by KNinja
     def extdir(self, *paths):
-        return os.path.join('ext', *paths)
+        return os.path.join(self._extdir, *paths)
 
 # Path to the K Framework
     def krepodir(self, *paths):
