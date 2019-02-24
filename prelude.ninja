@@ -44,10 +44,6 @@ pool opam
 # Basic K Toolchain
 # -----------------
 
-rule kprove
-    description     = Checking specification $in
-    command         = $k_bindir/kprove $flags --directory $directory $in
-
 # Advanced OCaml Backend Usage
 # ----------------------------
 #
