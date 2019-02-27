@@ -103,7 +103,7 @@ class KDefinition(Target):
             if self._alias: extension = self._alias
             else:           extension = 'krun'
         return self.proj.rule( 'krun'
-                             , description = 'Running $in ($directory)'
+                             , description = 'krun: $in ($directory)'
                              , command = '$k_bindir/krun $flags --debug --directory $directory $in > $out'
                              , ext = extension
                              ) \
@@ -114,7 +114,7 @@ class KDefinition(Target):
 
     def kast(self):
         return self.proj.rule( 'kast'
-                             , description = 'kast $in ($directory)'
+                             , description = 'kast: $in ($directory)'
                              , command     = '"$k_bindir/kast" $flags --debug --directory "$directory" "$in" > "$out"'
                              , ext = 'kast'
                              ) \
@@ -125,7 +125,7 @@ class KDefinition(Target):
         # The kprove command `cat`s its output after failing for convenience.
         # I'm not sure if there is a better way.
         return self.proj.rule( 'kast'
-                             , description = 'kprove $in ($directory)'
+                             , description = 'kprove: $in ($directory)'
                              , command     = '"$k_bindir/kprove" $flags --directory "$directory" "$in" > "$out" || (cat "$out"; false)'
                              , ext = 'kprove'
                              ) \
@@ -338,7 +338,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def rule_tangle(self, tangle_selector = '.k', ext = 'k'):
         return self.rule( 'tangle',
-                          description = 'Tangling $in',
+                          description = 'tangle: $in',
                           command     = 'LUA_PATH=$tangle_repository/?.lua '
                                       + 'pandoc $in -o $out --metadata=code:$tangle_selector --to "$tangle_repository/tangle.lua"'
                         ) \
@@ -367,7 +367,7 @@ class KProject(ninja.ninja_syntax.Writer):
         if backend == 'llvm':
             flags = '-Dhaskell.backend.skip'
         return self.rule( 'build-k'
-                        , description = 'Building K'
+                        , description = 'Building K ($backend)'
                         , command =    '(  cd $k_repository ' +
                                        '&& mvn package -q -DskipTests $flags' +
                                        ')' +
@@ -375,7 +375,8 @@ class KProject(ninja.ninja_syntax.Writer):
                         ) \
                    .output('$builddir/kbackend-' + backend) \
                    .implicit(implicit) \
-                   .variables(flags = flags)
+                   .variable('flags', flags) \
+                   .variable('backend', backend)
 
     def build_k(self, backend):
         if not(self._backend_targets[backend]):
@@ -384,7 +385,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def rule_kompile(self):
         self.rule( 'kompile'
-                 , description = 'Kompiling $in ($backend)'
+                 , description = 'kompile: $in ($backend)'
                  , command     = '$k_bindir/kompile --backend "$backend" --debug $flags '
                                + '--directory "$directory" $in'
                  )
