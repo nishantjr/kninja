@@ -254,6 +254,10 @@ class KProject(ninja.ninja_syntax.Writer):
     def krepodir(self, *paths):
         return self.extdir('k', *paths)
 
+# pandoc-tangle repository
+    def pandoc_tangle_repository(self, *paths):
+        return self.extdir('pandoc-tangle', *paths)
+
 # Directory where K binaries are stored
     def kbindir(self, *paths):
         return self.krepodir("k-distribution/target/release/k/bin/", *paths)
@@ -298,7 +302,7 @@ class KProject(ninja.ninja_syntax.Writer):
         self.variable('opam_root', self.opamroot())
         self.variable('k_repository', self.krepodir())
         self.variable('k_bindir', self.kbindir())
-        self.variable('tangle_repository', self.extdir('pandoc-tangle'))
+        self.variable('tangle_repository', self.pandoc_tangle_repository())
 
         self.include(self.kninjadir("prelude.ninja"))
         self.include(self.kninjadir('build-ocaml.ninja'))
@@ -331,8 +335,8 @@ class KProject(ninja.ninja_syntax.Writer):
     def init_tangle_submodule(self):
         if self._tangle_repo_init == None:
             self._tangle_repo_init = self.dotTarget().then(
-                    self.rule_git_submodule_init( path = self.extdir('pandoc-tangle')
-                                                , timestamp_file = self.builddir('pandoc-tangle.init')
+                    self.rule_git_submodule_init( path = self.pandoc_tangle_repository()
+                                                , timestamp_file = self.pandoc_tangle_repository('tangle.lua')
                                                 ))
         return self._tangle_repo_init
 
