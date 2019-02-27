@@ -201,6 +201,10 @@ class KProject(ninja.ninja_syntax.Writer):
                              .variable('flags', flags)         \
                         ).alias(alias)
 
+    def alias(self, alias, targets):
+        self.build(alias, 'phony', Target.to_paths(targets))
+        return Target(self, alias)
+
 # Directory Layout
 # ================
 #
