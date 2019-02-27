@@ -12,9 +12,10 @@ KNinja (and Ninja's) build definitions form a labelled multigraph where:
 """
 
 import kninja.ninja.ninja_syntax
+import copy
+import glob as glob_module
 import os
 import sys
-import copy
 
 def basename_no_ext(path):
     return os.path.splitext(os.path.basename(path))[0]
@@ -62,6 +63,37 @@ class KDefinition(Target):
              , "target must be a file in the kompiled dir\n\n\ttarget = %s\n\tkompiled_dirname = %s" \
                % (target, kompiled_dirname)
         super().__init__(proj, target)
+
+    """ High Level Interface """
+
+    def tests(self, expected, inputs = [], glob = None, alias = None):
+        if glob != None:
+            inputs += glob_module.glob(glob)
+        ret = []
+        for input in inputs:
+            test = self.proj.source(input) \
+                            .then(self.krun()) \
+                            .then(self.proj.check(expected = expected)) \
+                            .default()
+            ret += [test]
+        if alias != None:
+            ret = self.proj.alias(alias, ret)
+        return ret
+
+    def proofs(self, inputs = [], glob = None, alias = None):
+        if glob != None:
+            inputs += glob_module.glob(glob)
+        ret = []
+        for input in inputs:
+            test = self.proj.source(input) \
+                            .then(self.kprove()) \
+                            .default()
+            ret += [test]
+        if alias != None:
+            ret = self.proj.alias(alias, ret)
+        return ret
+
+    """ Low Level Interface """
 
     def directory(self, *path):
         return os.path.join(self._directory, *path)
