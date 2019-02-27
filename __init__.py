@@ -130,11 +130,7 @@ class Rule():
     def get_build_edge_target_path(self, source):
         if self._output: return self._output
         if self._ext:
-            path = source.path
-            if not(is_subpath(path, source.proj.builddir(''))):
-                # TODO: This is very simplistic, assumes that all paths are
-                # relative to topdir, or are prefixed with builddir
-                path = source.proj.builddir(path)
+            path = source.proj.place_in_output_dir(source.path + '.' + self._ext)
             return path + '.' + self._ext
         raise ValueError("Dont know how to generate target path for rule '%s'" % (self.name))
 
@@ -188,7 +184,7 @@ class KProject(ninja.ninja_syntax.Writer):
         input_target = self.source(input)
         if (output == None):
             (prefix, dot, old_extension) = input.rpartition('.')
-            output = prefix + '.k'
+            output = self.place_in_output_dir(prefix + '.k')
         return input_target.then(self.rule_tangle().output(output).variable('tangle_selector', selector))
 
     def definition( self
@@ -245,6 +241,15 @@ class KProject(ninja.ninja_syntax.Writer):
 # intefere with system functionality.
     def opamroot(self, *paths):
         return self.builddir('opam', *paths)
+
+# If a (relative) output path is not in the buiddir, place it there. Otherwise
+# return the same path unchanged.
+# TODO: This is very simplistic, assumes that all paths are relative to topdir,
+# or are prefixed with builddir
+    def place_in_output_dir(self, path):
+        if not(is_subpath(path, self.builddir(''))):
+            path = self.builddir(path)
+        return path
 
 # Generating the Ninja build script
 # =================================
