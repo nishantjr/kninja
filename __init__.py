@@ -260,7 +260,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
 # Directory where K binaries are stored
     def kbindir(self, *paths):
-        return self.krepodir("k-distribution/target/release/k/bin/", *paths)
+        return self.krepodir("k-distribution/target/release/k/bin", *paths)
 
 # Path to the KNinja project
     def kninjadir(self, *paths):
