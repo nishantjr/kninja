@@ -163,7 +163,7 @@ class Rule():
         if self._output: return self._output
         if self._ext:
             path = source.proj.place_in_output_dir(source.path + '.' + self._ext)
-            return path + '.' + self._ext
+            return path
         raise ValueError("Dont know how to generate target path for rule '%s'" % (self.name))
 
     def build_edge(self, proj, source, target):
