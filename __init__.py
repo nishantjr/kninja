@@ -169,6 +169,8 @@ class KProject(ninja.ninja_syntax.Writer):
     def __init__(self, extdir = 'ext'):
         self.written_rules = {}
         self._backend_targets =  dict(java=None, ocaml=None, haskell=None, llvm=None)
+        self._tangle_repo_init = None
+        self._k_repo_init = None
         self._extdir = extdir
 
         if not os.path.exists(self.builddir()):
@@ -277,17 +279,43 @@ class KProject(ninja.ninja_syntax.Writer):
     def dotTarget(self):
         return Target(self, '')
 
+    def rule_git_submodule_init(self, path, timestamp_file):
+        return self.rule( 'git-submodule-init',
+                          description = 'git submodule init $path',
+                          command     = 'git submodule update $flags --init "$path" && touch "$out"'
+                        ) \
+                   .output(timestamp_file) \
+                   .variable('path', path)
+
+    def init_tangle_submodule(self):
+        if self._tangle_repo_init == None:
+            self._tangle_repo_init = self.dotTarget().then(
+                    self.rule_git_submodule_init( path = self.extdir('pandoc-tangle')
+                                                , timestamp_file = self.builddir('pandoc-tangle.init')
+                                                ))
+        return self._tangle_repo_init
+
     def rule_tangle(self, tangle_selector = '.k', ext = 'k'):
         return self.rule( 'tangle',
                           description = 'Tangling $in',
                           command     = 'LUA_PATH=$tangle_repository/?.lua '
                                       + 'pandoc $in -o $out --metadata=code:$tangle_selector --to "$tangle_repository/tangle.lua"'
-                        ).ext('k') \
-                   .variables(tangle_selector = tangle_selector) \
+                        ) \
+                   .ext('k') \
+                   .implicit([self.init_tangle_submodule()]) \
+                   .variables(tangle_selector = tangle_selector)
+
+    def init_k_submodule(self):
+        if self._k_repo_init == None:
+            self._k_repo_init = self.dotTarget().then(
+                    self.rule_git_submodule_init( path = self.extdir('k')
+                                                , timestamp_file = self.builddir('k.init')
+                                                ).variable('flags', '--recursive'))
+        return self._k_repo_init
 
     def rule_build_k(self, backend):
         flags = ''
-        implicit = []
+        implicit = [self.init_k_submodule()]
         if backend == 'ocaml':
             implicit += ['ocaml-deps']
             flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
