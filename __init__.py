@@ -66,16 +66,26 @@ class Target():
         if isinstance(value, Target):
             return value.path
 
-class KDefinition(Target):
-    def __init__(self, proj, kompiled_dirname, target, krun_flags = ''):
-        self._directory = os.path.dirname(kompiled_dirname)
+class KDefinition():
+    def __init__(self, proj, directory, kompiled_dirname, target, krun_flags = '', krun_extension = 'krun'):
+        self._directory = directory
         self._krun_flags = krun_flags
-        assert os.path.dirname(target) == kompiled_dirname \
-             , "target must be a file in the kompiled dir\n\n\ttarget = %s\n\tkompiled_dirname = %s" \
-               % (target, kompiled_dirname)
-        super().__init__(proj, target)
+        self._krun_extension = krun_extension
+        self._target = target
+        self._proj = proj
+
+    @property
+    def proj(self):
+        return self._proj
+
+    @property
+    def target(self):
+        return self._target
 
     """ High Level Interface """
+
+    def directory(self, *path):
+        return os.path.join(self._directory, *path)
 
     def tests(self, expected, inputs = [], glob = None, alias = None):
         if glob != None:
@@ -106,22 +116,16 @@ class KDefinition(Target):
 
     """ Low Level Interface """
 
-    def directory(self, *path):
-        return os.path.join(self._directory, *path)
-
     def krun(self, krun_flags = '', extension = None):
-        if not(extension):
-            if self._alias: extension = self._alias
-            else:           extension = 'krun'
         return self.proj.rule( 'krun'
                              , description = 'krun: $in ($directory)'
                              , command = '$k_bindir/krun $flags --debug --directory $directory $in > $out'
-                             , ext = extension
+                             , ext = self._krun_extension
                              ) \
                              .variables( directory = self.directory()
                                        , flags = self._krun_flags + ' ' + krun_flags
                                        ) \
-                             .implicit([self.path])
+                             .implicit([self.target])
 
     def kast(self):
         return self.proj.rule( 'kast'
@@ -130,7 +134,7 @@ class KDefinition(Target):
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit([self.path])
+                             .implicit([self.target])
 
     def kprove(self):
         # The kprove command `cat`s its output after failing for convenience.
@@ -141,7 +145,7 @@ class KDefinition(Target):
                              , ext = 'kprove'
                              ) \
                              .variables(directory = self.directory()) \
-                             .implicit([self.path])
+                             .implicit([self.target])
 
 class Rule():
     def __init__(self, name, description, command, ext = None):
@@ -184,21 +188,6 @@ class Rule():
                   )
         return Target(proj, target)
 
-class KompileRule(Rule):
-    def __init__(self):
-        super().__init__('kompile', 'foo', 'bar')
-
-    def kompiled_dirname(self, source):
-        return self._variables.get('directory') + '/' + basename_no_ext(source.path) + '-kompiled'
-
-    def get_build_edge_target_path(self, source):
-        if self._output: return self._output
-        return  self.kompiled_dirname(source) + '/timestamp'
-
-    def build_edge(self, proj, source, target):
-        super().build_edge(proj, source, target)
-        return KDefinition(proj, self.kompiled_dirname(source), target)
-
 # KProject
 # ========
 #
@@ -238,6 +227,7 @@ class KProject(ninja.ninja_syntax.Writer):
                   , flags = ''
                   , other = []
                   ):
+        # If a source file has extension '.md', tangle it:
         def target_from_source(source):
             if get_extension(source) == 'md':
                 return self.tangle( source
@@ -249,11 +239,28 @@ class KProject(ninja.ninja_syntax.Writer):
             return self.source(source)
         main = target_from_source(main)
         other = map(target_from_source, other)
-        return main.then(self.kompile(backend = backend)       \
-                             .implicit(other)                  \
-                             .variable('directory', directory) \
-                             .variable('flags', flags)         \
-                        ).alias(alias)
+
+        kompiled_dir =  os.path.join(directory, basename_no_ext(main.path) + '-kompiled')
+
+        if backend == 'ocaml' or backend == 'llvm':
+            output = os.path.join(kompiled_dir, 'interpreter')
+        elif backend == 'java':
+            output = os.path.join(kompiled_dir, 'timestamp')
+        elif backend == 'haskell':
+            output = os.path.join(kompiled_dir, 'kore.txt')
+        else:
+            assert false, 'Unknown backend "' + backend + "'"
+
+        target = main.then(self.rule_kompile()                    \
+                               .output(output)                    \
+                               .implicit_outputs([directory])     \
+                               .implicit(other)                   \
+                               .implicit([self.build_k(backend)]) \
+                               .variable('backend', backend)      \
+                               .variable('directory', directory)  \
+                               .variable('flags', flags)          \
+                          ).alias(alias)
+        return KDefinition(self, directory, kompiled_dir, target, krun_extension = alias)
 
     def alias(self, alias, targets):
         self.build(alias, 'phony', Target.to_paths(targets))
@@ -406,16 +413,11 @@ class KProject(ninja.ninja_syntax.Writer):
         return self._backend_targets[backend]
 
     def rule_kompile(self):
-        self.rule( 'kompile'
-                 , description = 'kompile: $in ($backend)'
-                 , command     = '$k_bindir/kompile --backend "$backend" --debug $flags '
-                               + '--directory "$directory" $in'
-                 )
-        return KompileRule()
-
-    def kompile(self, backend):
-        ret = self.rule_kompile().variables(backend = backend).implicit([self.build_k(backend)])
-        return ret
+        return  self.rule( 'kompile'
+                         , description = 'kompile: $in ($backend)'
+                         , command     = '$k_bindir/kompile --backend "$backend" --debug $flags '
+                                       + '--directory "$directory" $in'
+                         )
 
     def ocamlfind(self):
         return self.rule( 'ocamlfind'
