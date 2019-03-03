@@ -431,46 +431,7 @@ class KProject(ninja.ninja_syntax.Writer):
                            , ocamlfind_flags = ""
                            , packages = []
                            ):
-        kompile_flags += " --gen-ml-only"
-        kompiledir_ml_sources_1 = [ 'constants.ml'
-                                  , 'prelude.ml'
-                                  , 'plugin.ml'
-                                  ]
-        kompiledir_ml_sources_2 = [ 'realdef.ml'
-                                  , 'parser.mli'
-                                  , 'parser.ml'
-                                  , 'lexer.ml'
-                                  , 'run.ml'
-                                  ]
-        kompile = self.rule_kompile().variables( flags = kompile_flags
-                                               , backend = 'ocaml'
-                                               , directory = directory
-                                               ).implicit([self.build_k()])
-        kompiled_dirname = kompile.kompiled_dirname(main_file)
-        def prefix_with_kompiled_dir(f):
-            return os.path.join(kompiled_dirname, f)
-        ml_sources = list(map(prefix_with_kompiled_dir, kompiledir_ml_sources_1)) \
-                   + additional_ml_sources \
-                   + list(map(prefix_with_kompiled_dir, kompiledir_ml_sources_2))
-        realdef_cmx  = os.path.join(kompiled_dirname, 'realdef.cmx')
-        realdef_cmo = os.path.join(kompiled_dirname, 'realdef.cmxs')
-        package_flags = map(lambda p: '-package ' + p + ' ', packages)
-        interpreter = main_file.then(kompile.output(kompiled_dirname + '/interpreter.ml')) \
-                     .then(self.ocamlfind().variables(flags = '-g -w -11-26 -linkpkg '
-                                                            + '-I ' + kompiled_dirname + ' '
-                                                            + '-I ext/blockchain-k-plugin/plugin '
-                                                            + '-I ext/blockchain-k-plugin/ '
-                                                            + ' '.join(package_flags)
-                                                            + ' -linkpkg -linkall -thread -safe-string '
-                                                            + ' '.join(Target.to_paths(ml_sources))
-                                                ) \
-                                     .implicit(['ocaml-deps']) \
-                                     .output(os.path.join(kompiled_dirname, 'interpreter')) \
-                                     .implicit_outputs([realdef_cmx])
-                          )
-        t = self.source(realdef_cmx) \
-            .then( self.ocamlfind().variables(flags = '-shared').output(realdef_cmo) )
-        return KDefinition(self, kompiled_dirname, t.path, krun_flags = '--interpret')
+        assert false, "Unsupported"
 
     def check(self, expected):
         return self.rule( 'check-test-result'
