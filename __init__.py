@@ -75,11 +75,13 @@ class KDefinition():
                 , krun_flags = ''
                 , krun_extension = 'krun'
                 , krun_env = ''
+                , kprove_extension = 'kprove'
                 ):
         self._directory = directory
         self._krun_flags = krun_flags
         self._krun_extension = krun_extension
         self._krun_env = krun_env
+        self._kprove_extension = kprove_extension
         self._target = target
         self._proj = proj
 
@@ -148,10 +150,10 @@ class KDefinition():
     def kprove(self):
         # The kprove command `cat`s its output after failing for convenience.
         # I'm not sure if there is a better way.
-        return self.proj.rule( 'kast'
+        return self.proj.rule( 'kprove'
                              , description = 'kprove: $in ($directory)'
                              , command     = '$env "$k_bindir/kprove" $flags --directory "$directory" "$in" > "$out" || (cat "$out"; false)'
-                             , ext = 'kprove'
+                             , ext = self._kprove_extension
                              ) \
                              .variables(directory = self.directory()) \
                              .implicit([self.target])
@@ -273,7 +275,8 @@ class KProject(ninja.ninja_syntax.Writer):
                                .variable('flags', flags)          \
                           ).alias(alias)
         return KDefinition( self, directory, kompiled_dir, target
-                          , krun_extension = alias, krun_env = env
+                          , krun_extension = alias + '-krun', krun_env = env
+                          , kprove_extension = alias + '-kprove'
                           )
 
     def alias(self, alias, targets):
