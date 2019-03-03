@@ -98,7 +98,8 @@ class KDefinition():
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def tests(self, expected, inputs = [], glob = None, alias = None):
+    def tests(self, expected, glob = None, alias = None):
+        inputs = []
         if glob != None:
             inputs += glob_module.glob(glob)
         ret = []
@@ -112,7 +113,8 @@ class KDefinition():
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, inputs = [], glob = None, alias = None):
+    def proofs(self, glob = None, alias = None):
+        inputs = []
         if glob != None:
             inputs += glob_module.glob(glob)
         ret = []
