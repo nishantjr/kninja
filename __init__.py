@@ -281,9 +281,12 @@ class KProject(ninja.ninja_syntax.Writer):
                           , kprove_extension = alias + '-kprove'
                           )
 
-    def alias(self, alias, targets):
-        self.build(alias, 'phony', Target.to_paths(targets))
-        return Target(self, alias)
+    def alias(self, name, targets):
+        self.build(name, 'phony', Target.to_paths(targets))
+        return Target(self, name)
+
+    def default(self, targets):
+        super().default(Target.to_paths(targets))
 
 # Directory Layout
 # ================
