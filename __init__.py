@@ -67,10 +67,19 @@ class Target():
             return value.path
 
 class KDefinition():
-    def __init__(self, proj, directory, kompiled_dirname, target, krun_flags = '', krun_extension = 'krun'):
+    def __init__( self
+                , proj
+                , directory
+                , kompiled_dirname
+                , target
+                , krun_flags = ''
+                , krun_extension = 'krun'
+                , krun_env = ''
+                ):
         self._directory = directory
         self._krun_flags = krun_flags
         self._krun_extension = krun_extension
+        self._krun_env = krun_env
         self._target = target
         self._proj = proj
 
@@ -119,18 +128,18 @@ class KDefinition():
     def krun(self, krun_flags = '', extension = None):
         return self.proj.rule( 'krun'
                              , description = 'krun: $in ($directory)'
-                             , command = '$k_bindir/krun $flags --debug --directory $directory $in > $out'
+                             , command = '$env "$k_bindir/krun" $flags --debug --directory $directory $in > $out'
                              , ext = self._krun_extension
                              ) \
-                             .variables( directory = self.directory()
-                                       , flags = self._krun_flags + ' ' + krun_flags
-                                       ) \
+                             .variable('directory', self.directory()) \
+                             .variable('flags', self._krun_flags + ' ' + krun_flags) \
+                             .variable('env', self._krun_env) \
                              .implicit([self.target])
 
     def kast(self):
         return self.proj.rule( 'kast'
                              , description = 'kast: $in ($directory)'
-                             , command     = '"$k_bindir/kast" $flags --debug --directory "$directory" "$in" > "$out"'
+                             , command     = '$env "$k_bindir/kast" $flags --debug --directory "$directory" "$in" > "$out"'
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
@@ -141,7 +150,7 @@ class KDefinition():
         # I'm not sure if there is a better way.
         return self.proj.rule( 'kast'
                              , description = 'kprove: $in ($directory)'
-                             , command     = '"$k_bindir/kprove" $flags --directory "$directory" "$in" > "$out" || (cat "$out"; false)'
+                             , command     = '$env "$k_bindir/kprove" $flags --directory "$directory" "$in" > "$out" || (cat "$out"; false)'
                              , ext = 'kprove'
                              ) \
                              .variables(directory = self.directory()) \
@@ -241,9 +250,11 @@ class KProject(ninja.ninja_syntax.Writer):
         other = map(target_from_source, other)
 
         kompiled_dir =  os.path.join(directory, basename_no_ext(main.path) + '-kompiled')
-
+        output = None
+        env = ''
         if backend == 'ocaml' or backend == 'llvm':
             output = os.path.join(kompiled_dir, 'interpreter')
+            env = 'opam config exec --'
         elif backend == 'java':
             output = os.path.join(kompiled_dir, 'timestamp')
         elif backend == 'haskell':
@@ -258,9 +269,12 @@ class KProject(ninja.ninja_syntax.Writer):
                                .implicit([self.build_k(backend)]) \
                                .variable('backend', backend)      \
                                .variable('directory', directory)  \
+                               .variable('env', env)              \
                                .variable('flags', flags)          \
                           ).alias(alias)
-        return KDefinition(self, directory, kompiled_dir, target, krun_extension = alias)
+        return KDefinition( self, directory, kompiled_dir, target
+                          , krun_extension = alias, krun_env = env
+                          )
 
     def alias(self, alias, targets):
         self.build(alias, 'phony', Target.to_paths(targets))
@@ -415,7 +429,7 @@ class KProject(ninja.ninja_syntax.Writer):
     def rule_kompile(self):
         return  self.rule( 'kompile'
                          , description = 'kompile: $in ($backend)'
-                         , command     = '$k_bindir/kompile --backend "$backend" --debug $flags '
+                         , command     = '$env "$k_bindir/kompile" --backend "$backend" --debug $flags '
                                        + '--directory "$directory" $in'
                          )
 
