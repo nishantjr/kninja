@@ -19,8 +19,19 @@ import sys
 
 def basename_no_ext(path):
     return os.path.splitext(os.path.basename(path))[0]
+def get_extension(path):
+    return os.path.splitext(path)[1][1:]
 def is_subpath(path, parent):
     return os.path.abspath(path).startswith(os.path.abspath(parent) + os.sep)
+def place_in_dir(path, dir):
+    # TODO: This is very simplistic, assumes that all paths are relative to topdir,
+    # or are prefixed with builddir
+    assert path[0] != '/', 'place_in_dir only supports relative paths'
+    if not(is_subpath(path, dir)):
+        path = os.path.join(dir, path)
+    return path
+def replace_extension(path, new_extension):
+    return os.path.splitext(path)[0] + '.' + new_extension
 
 class Target():
     def __init__(self, proj, path):
@@ -215,8 +226,7 @@ class KProject(ninja.ninja_syntax.Writer):
     def tangle(self, input, output = None, selector = '.k'):
         input_target = self.source(input)
         if (output == None):
-            (prefix, dot, old_extension) = input.rpartition('.')
-            output = self.place_in_output_dir(prefix + '.k')
+            output = self.place_in_output_dir(replace_extension(input, 'k'))
         return input_target.then(self.rule_tangle().output(output).variable('tangle_selector', selector))
 
     def definition( self
@@ -224,9 +234,21 @@ class KProject(ninja.ninja_syntax.Writer):
                   , backend
                   , main
                   , directory
+                  , tangle_selector = '.k'
                   , flags = ''
                   , other = []
                   ):
+        def target_from_source(source):
+            if get_extension(source) == 'md':
+                return self.tangle( source
+                                  , selector = tangle_selector
+                                  , output = place_in_dir( replace_extension(source, 'k')
+                                                         , directory
+                                                         )
+                                  )
+            return self.source(source)
+        main = target_from_source(main)
+        other = map(target_from_source, other)
         return main.then(self.kompile(backend = backend)       \
                              .implicit(other)                  \
                              .variable('directory', directory) \
@@ -284,12 +306,8 @@ class KProject(ninja.ninja_syntax.Writer):
 
 # If a (relative) output path is not in the buiddir, place it there. Otherwise
 # return the same path unchanged.
-# TODO: This is very simplistic, assumes that all paths are relative to topdir,
-# or are prefixed with builddir
     def place_in_output_dir(self, path):
-        if not(is_subpath(path, self.builddir(''))):
-            path = self.builddir(path)
-        return path
+        return place_in_dir(path, self.builddir(''))
 
 # Generating the Ninja build script
 # =================================
