@@ -98,7 +98,7 @@ class KDefinition():
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def tests(self, expected, glob = None, alias = None):
+    def tests(self, expected, glob = None, alias = None, default = True):
         inputs = []
         if glob != None:
             inputs += glob_module.glob(glob)
@@ -106,22 +106,22 @@ class KDefinition():
         for input in inputs:
             test = self.proj.source(input) \
                             .then(self.krun()) \
-                            .then(self.proj.check(expected = expected)) \
-                            .default()
+                            .then(self.proj.check(expected = expected))
+            if default: test.default()
             ret += [test]
         if alias != None:
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, glob = None, alias = None):
+    def proofs(self, glob = None, alias = None, default = True):
         inputs = []
         if glob != None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
             test = self.proj.source(input) \
-                            .then(self.kprove()) \
-                            .default()
+                            .then(self.kprove())
+            if default: test.default()
             ret += [test]
         if alias != None:
             ret = self.proj.alias(alias, ret)
