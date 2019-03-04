@@ -113,14 +113,14 @@ class KDefinition():
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, glob = None, alias = None, default = True):
+    def proofs(self, glob = None, alias = None, default = True, flags = ''):
         inputs = []
         if glob != None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
             test = self.proj.source(input) \
-                            .then(self.kprove())
+                            .then(self.kprove().variable('flags', flags))
             if default: test.default()
             ret += [test]
         if alias != None:
