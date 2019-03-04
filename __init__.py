@@ -71,21 +71,27 @@ class Target():
 class KDefinition():
     def __init__( self
                 , proj
+                , alias
                 , directory
                 , kompiled_dirname
                 , target
+                , backend
+                , runner_script
                 , krun_flags = ''
                 , krun_extension = 'krun'
                 , krun_env = ''
                 , kprove_extension = 'kprove'
                 ):
+        self._alias = alias
+        self._backend = backend
         self._directory = directory
-        self._krun_flags = krun_flags
-        self._krun_extension = krun_extension
-        self._krun_env = krun_env
         self._kprove_extension = kprove_extension
-        self._target = target
+        self._krun_env = krun_env
+        self._krun_extension = krun_extension
+        self._krun_flags = krun_flags
         self._proj = proj
+        self._runner_script = runner_script
+        self._target = target
 
     @property
     def proj(self):
@@ -110,7 +116,7 @@ class KDefinition():
             if e == None:
                 e = append_extension(input, 'expected')
             test = self.proj.source(input) \
-                            .then(self.krun()) \
+                            .then(self.runner_script(mode = 'run')) \
                             .then(self.proj.check(expected = e))
             if default: test.default()
             ret += [test]
@@ -118,14 +124,14 @@ class KDefinition():
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, glob = None, alias = None, default = True, flags = ''):
+    def proofs(self, glob = None, alias = None, default = True):
         inputs = []
         if glob != None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
             test = self.proj.source(input) \
-                            .then(self.kprove().variable('flags', flags))
+                            .then(self.runner_script(mode = 'prove'))
             if default: test.default()
             ret += [test]
         if alias != None:
@@ -134,7 +140,22 @@ class KDefinition():
 
     """ Low Level Interface """
 
-    def krun(self, krun_flags = '', extension = None):
+    # e.g.:
+    #   script: ./kwasm
+    #   backend: ocaml|java|haskell
+    #   mode: run|prove
+    def runner_script(self, mode):
+        # TODO: We use a different rule for each kompiled definition, since
+        # the `ext` flag is tied to the rule instead of the build edge
+        return self.proj.rule( 'runner-script-' + self._alias + '-' + mode
+                             , description = mode + ': ' + self._alias + ' $in'
+                             , command = self._runner_script + ' ' + mode + ' --backend "$backend" "$in" > "$out"'
+                             , ext = self._alias + '-' + mode
+                             ) \
+                             .variable('backend', self._backend) \
+                             .implicit([self.target])
+
+    def krun(self, krun_flags = '', extension = None, runner = None):
         return self.proj.rule( 'krun'
                              , description = 'krun: $in ($directory)'
                              , command = '$env "$k_bindir/krun" $flags --directory $directory $in > $out'
@@ -242,6 +263,7 @@ class KProject(ninja.ninja_syntax.Writer):
                   , alias
                   , backend
                   , main
+                  , runner_script
                   , other = []
                   , directory = None
                   , tangle_selector = '.k'
@@ -287,9 +309,11 @@ class KProject(ninja.ninja_syntax.Writer):
                                .variable('env', env)              \
                                .variable('flags', flags)          \
                           ).alias(alias)
-        return KDefinition( self, directory, kompiled_dir, target
+        return KDefinition( self, alias, directory, kompiled_dir, target
+                          , runner_script = runner_script
                           , krun_extension = alias + '-krun', krun_env = env
                           , kprove_extension = alias + '-kprove'
+                          , backend = backend
                           )
 
     def alias(self, name, targets):
