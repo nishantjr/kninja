@@ -309,7 +309,7 @@ class KProject(ninja.ninja_syntax.Writer):
                                .variable('backend', backend)      \
                                .variable('directory', directory)  \
                                .variable('env', env)              \
-                               .variable('flags', flags)          \
+                               .variable('flags', '-I ' + directory + ' ' + flags)  \
                           ).alias(alias)
         return KDefinition( self, alias, directory, kompiled_dir, target
                           , runner_script = runner_script
