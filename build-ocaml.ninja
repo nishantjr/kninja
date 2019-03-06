@@ -1,4 +1,4 @@
-build $opam_root/$ocaml_version.timestamp : opam-build-ocamlc-k $k_bindir/kompile
+build $opam_root/$ocaml_version.timestamp : opam-build-ocamlc-k
 build $opam_root/$ocaml_version/lib/cryptokit/opam.config : opam-install $opam_root/$ocaml_version.timestamp
     package = cryptokit
 build $opam_root/$ocaml_version/lib/mlgmp/opam.config : opam-install $opam_root/$ocaml_version.timestamp
