@@ -178,11 +178,12 @@ class KProject(ninja.ninja_syntax.Writer):
 
     """ High level interface """
 
-    def tangle(self, input_path):
-        input_target = self.source(input_path)
-        (prefix, dot, old_extension) = input_path.rpartition('.')
-        output = prefix + '.k'
-        return input_target.then(self.rule_tangle().output(output))
+    def tangle(self, input, output = None, selector = '.k'):
+        input_target = self.source(input)
+        if (output == None):
+            (prefix, dot, old_extension) = input.rpartition('.')
+            output = prefix + '.k'
+        return input_target.then(self.rule_tangle().output(output).variable('tangle_selector', selector))
 
     def definition( self
                   , backend
