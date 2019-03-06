@@ -190,11 +190,11 @@ class KProject(ninja.ninja_syntax.Writer):
         return input_target.then(self.rule_tangle().output(output).variable('tangle_selector', selector))
 
     def definition( self
+                  , alias
                   , backend
                   , main
                   , directory
-                  , flags
-                  , alias
+                  , flags = ''
                   , other = []
                   ):
         return main.then(self.kompile(backend = backend)       \
