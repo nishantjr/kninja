@@ -178,6 +178,10 @@ class KProject(ninja.ninja_syntax.Writer):
 
     """ High level interface """
 
+    def main(self, argv = sys.argv[1:]):
+        self.close()
+        os.execlp('ninja', 'ninja', '-f', self.builddir('generated.ninja'), *argv)
+
     def tangle(self, input, output = None, selector = '.k'):
         input_target = self.source(input)
         if (output == None):
