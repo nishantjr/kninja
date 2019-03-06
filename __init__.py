@@ -32,6 +32,8 @@ def place_in_dir(path, dir):
     return path
 def replace_extension(path, new_extension):
     return os.path.splitext(path)[0] + '.' + new_extension
+def append_extension(path, extension):
+    return path + '.' + extension
 
 class Target():
     def __init__(self, proj, path):
@@ -98,15 +100,18 @@ class KDefinition():
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def tests(self, expected, glob = None, alias = None, default = True):
+    def tests(self, expected = None, glob = None, alias = None, default = True):
         inputs = []
         if glob != None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
+            e = expected
+            if e == None:
+                e = append_extension(input, 'expected')
             test = self.proj.source(input) \
                             .then(self.krun()) \
-                            .then(self.proj.check(expected = expected))
+                            .then(self.proj.check(expected = e))
             if default: test.default()
             ret += [test]
         if alias != None:
