@@ -241,11 +241,14 @@ class KProject(ninja.ninja_syntax.Writer):
                   , alias
                   , backend
                   , main
-                  , directory
+                  , other = []
+                  , directory = None
                   , tangle_selector = '.k'
                   , flags = ''
-                  , other = []
                   ):
+        if directory == None:
+            directory = self.builddir('defn', alias)
+
         # If a source file has extension '.md', tangle it:
         def target_from_source(source):
             if get_extension(source) == 'md':
