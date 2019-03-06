@@ -155,7 +155,8 @@ class KDefinition():
                              .implicit([self.target])
 
     def kprove(self):
-        # The kprove command `cat`s its output after failing for convenience.
+        # kprove prints errors to stdout, instead of stderror
+        # The kprove rule `cat`s its output after failing for convenience.
         # I'm not sure if there is a better way.
         return self.proj.rule( 'kprove'
                              , description = 'kprove: $in ($directory)'
