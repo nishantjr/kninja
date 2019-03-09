@@ -431,11 +431,12 @@ class KProject(ninja.ninja_syntax.Writer):
         return self.rule( 'build-k'
                         , description = 'Building K ($backend)'
                         , command =    '(  cd $k_repository ' +
-                                       '&& mvn package -q -DskipTests $flags' +
+                                       '&& mvn package -DskipTests $flags' +
                                        ')' +
                                     '&& touch $out'
                         ) \
                    .output('$builddir/kbackend-' + backend) \
+                   .pool('console') \
                    .implicit(implicit) \
                    .variable('flags', flags) \
                    .variable('backend', backend)
