@@ -410,7 +410,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def rule_git_submodule_init(self, path, timestamp_file):
         return self.rule( 'git-submodule-init',
-                          description = 'git submodule init $path',
+                          description = None,
                           command     = 'git submodule update $flags --init "$path" && touch "$out"'
                         ) \
                    .output(timestamp_file) \
@@ -467,7 +467,7 @@ class KProject(ninja.ninja_syntax.Writer):
         if backend == 'llvm':
             flags = '-Dhaskell.backend.skip -Dproject.build.type=Debug'
         return self.rule( 'build-k'
-                        , description = 'Building K ($backend)'
+                        , description = 'build K: $backend'
                         , command =    '(  cd $k_repository ' +
                                        '&& mvn package -DskipTests $flags' +
                                        ')' +
@@ -493,7 +493,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def ocamlfind(self):
         return self.rule( 'ocamlfind'
-                        , description = 'ocamlfind $out'
+                        , description = 'ocamlfind: $out'
                         , command = 'ocamlfind opt -o $out $flags $in'
                         )
 
@@ -509,7 +509,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def check(self, expected):
         return self.rule( 'check-test-result'
-                        , description = 'Checking $in'
+                        , description = 'diff: $in'
                         , command = 'git diff --no-index $flags $in $expected'
                         , ext = 'test') \
                    .variables(expected = expected) \
