@@ -124,14 +124,17 @@ class KDefinition():
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, glob = None, alias = None, default = True):
+    def proofs(self, glob = None, alias = None, default = True, expected = None):
         inputs = []
+        if expected == None:
+           expected = self.proj.kninjadir('kprove.expected')
         if glob != None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
             test = self.proj.source(input) \
-                            .then(self.runner_script(mode = 'prove'))
+                            .then(self.runner_script(mode = 'prove')) \
+                            .then(self.proj.check(expected))
             if default: test.default()
             ret += [test]
         if alias != None:
