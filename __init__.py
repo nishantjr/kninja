@@ -427,7 +427,7 @@ class KProject(ninja.ninja_syntax.Writer):
         if backend == 'haskell':
             flags = '-Dllvm.backend.skip'
         if backend == 'llvm':
-            flags = '-Dhaskell.backend.skip'
+            flags = '-Dhaskell.backend.skip -Dproject.build.type=Debug'
         return self.rule( 'build-k'
                         , description = 'Building K ($backend)'
                         , command =    '(  cd $k_repository ' +
