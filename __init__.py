@@ -265,9 +265,11 @@ class KProject(ninja.ninja_syntax.Writer):
         kompiled_dir =  os.path.join(directory, basename_no_ext(main.path) + '-kompiled')
         output = None
         env = ''
-        if backend == 'ocaml' or backend == 'llvm':
+        if backend == 'ocaml':
             output = os.path.join(kompiled_dir, 'interpreter')
             env = 'opam config exec --'
+        elif backend == 'llvm':
+            output = os.path.join(kompiled_dir, 'interpreter')
         elif backend == 'java':
             output = os.path.join(kompiled_dir, 'timestamp')
         elif backend == 'haskell':
