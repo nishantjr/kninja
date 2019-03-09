@@ -241,7 +241,6 @@ class KProject(ninja.ninja_syntax.Writer):
         self._tangle_repo_init = None
         self._k_repo_init = None
         self._extdir = extdir
-
         if not os.path.exists(self.builddir()):
             os.mkdir(self.builddir())
         super().__init__(open(self.builddir('generated.ninja'), 'w'))
@@ -386,6 +385,11 @@ class KProject(ninja.ninja_syntax.Writer):
         self.variable('k_repository', self.krepodir())
         self.variable('k_bindir', self.kbindir())
         self.variable('tangle_repository', self.pandoc_tangle_repository())
+        self.rule('clean'
+                 , description = 'cleaning'
+                 , command = 'ninja -t clean ; rm -rf "$builddir" ; git submodule update --init --recursive'
+                 )
+        self.build('clean', 'clean')
 
     def rule(self, name, description, command, ext = None):
         rule = Rule(name, description, command, ext)
