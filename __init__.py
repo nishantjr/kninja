@@ -280,7 +280,6 @@ class KProject(ninja.ninja_syntax.Writer):
 
         target = main.then(self.rule_kompile()                    \
                                .output(output)                    \
-                               .implicit_outputs([directory])     \
                                .implicit(other)                   \
                                .implicit([self.build_k(backend)]) \
                                .variable('backend', backend)      \
