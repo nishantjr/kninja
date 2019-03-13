@@ -216,6 +216,7 @@ class KProject(ninja.ninja_syntax.Writer):
     def __init__(self, extdir = 'ext'):
         self.written_rules = {}
         self._backend_targets =  dict(java=None, ocaml=None, haskell=None, llvm=None)
+        self._target_configure_opam = None
         self._tangle_repo_init = None
         self._k_repo_init = None
         self._extdir = extdir
@@ -355,15 +356,13 @@ class KProject(ninja.ninja_syntax.Writer):
     def generate_ninja(self):
         self.comment('This is a generated file')
         self.newline()
+        self.variable('ninja_required_version', '1.7')
         self.variable('builddir', self.builddir())
         # TODO: Remove underscores for consistancy
         self.variable('opam_root', self.opamroot())
         self.variable('k_repository', self.krepodir())
         self.variable('k_bindir', self.kbindir())
         self.variable('tangle_repository', self.pandoc_tangle_repository())
-
-        self.include(self.kninjadir("prelude.ninja"))
-        self.include(self.kninjadir('build-ocaml.ninja'))
 
     def rule(self, name, description, command, ext = None):
         rule = Rule(name, description, command, ext)
@@ -416,11 +415,23 @@ class KProject(ninja.ninja_syntax.Writer):
                                                 ).variable('flags', '--recursive'))
         return self._k_repo_init
 
+    def rule_configure_opam(self):
+        return self.rule( 'k-configure-opam'
+                        , description = 'k-configure-opam'
+                        , command = "$k_bindir/k-configure-opam && touch $out"
+                        ) \
+                   .output(self.builddir('k-configure-opam.timestamp'))
+
+    def configure_opam(self):
+       if not(self._target_configure_opam):
+           self._target_configure_opam = self.dotTarget().then(self.rule_configure_opam())
+       return self._target_configure_opam
+
     def rule_build_k(self, backend):
         flags = ''
         implicit = [self.init_k_submodule()]
         if backend == 'ocaml':
-            implicit += ['ocaml-deps']
+            implicit += [self.configure_opam()]
             flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
         if backend == 'java':
             flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
