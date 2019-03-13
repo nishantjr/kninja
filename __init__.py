@@ -137,7 +137,7 @@ class KDefinition():
     def krun(self, krun_flags = '', extension = None):
         return self.proj.rule( 'krun'
                              , description = 'krun: $in ($directory)'
-                             , command = '$env "$k_bindir/krun" $flags --debug --directory $directory $in > $out'
+                             , command = '$env "$k_bindir/krun" $flags --directory $directory $in > $out'
                              , ext = self._krun_extension
                              ) \
                              .variable('directory', self.directory()) \
@@ -148,7 +148,7 @@ class KDefinition():
     def kast(self):
         return self.proj.rule( 'kast'
                              , description = 'kast: $in ($directory)'
-                             , command     = '$env "$k_bindir/kast" $flags --debug --directory "$directory" "$in" > "$out"'
+                             , command     = '$env "$k_bindir/kast" $flags --directory "$directory" "$in" > "$out"'
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
@@ -459,7 +459,7 @@ class KProject(ninja.ninja_syntax.Writer):
     def rule_kompile(self):
         return  self.rule( 'kompile'
                          , description = 'kompile: $in ($backend)'
-                         , command     = '$env "$k_bindir/kompile" --backend "$backend" --debug $flags '
+                         , command     = '$env "$k_bindir/kompile" --backend "$backend" $flags '
                                        + '--directory "$directory" $in'
                          )
 
