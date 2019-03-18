@@ -143,10 +143,7 @@ class KDefinition():
 
     """ Low Level Interface """
 
-    # e.g.:
-    #   script: ./kwasm
-    #   backend: ocaml|java|haskell
-    #   mode: run|prove
+    # mode: run|prove
     def runner_script(self, mode):
         # TODO: We use a different rule for each kompiled definition, since
         # the `ext` flag is tied to the rule instead of the build edge
