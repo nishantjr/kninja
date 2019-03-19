@@ -287,8 +287,10 @@ class KProject(ninja.ninja_syntax.Writer):
         kompiled_dir =  os.path.join(directory, basename_no_ext(main.path) + '-kompiled')
         output = None
         env = ''
+        implicit_inputs = [self.build_k(backend)]
         if backend == 'ocaml':
             output = os.path.join(kompiled_dir, 'interpreter')
+            implicit_inputs += [self.configure_opam()]
             env = 'opam config exec --'
         elif backend == 'llvm':
             output = os.path.join(kompiled_dir, 'interpreter')
@@ -302,7 +304,7 @@ class KProject(ninja.ninja_syntax.Writer):
         target = main.then(self.rule_kompile()                    \
                                .output(output)                    \
                                .implicit(other)                   \
-                               .implicit([self.build_k(backend)]) \
+                               .implicit(implicit_inputs) \
                                .variable('backend', backend)      \
                                .variable('directory', directory)  \
                                .variable('env', env)              \
@@ -451,14 +453,15 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def configure_opam(self):
        if not(self._target_configure_opam):
-           self._target_configure_opam = self.dotTarget().then(self.rule_configure_opam())
+           self._target_configure_opam = \
+                self.dotTarget().then(self.rule_configure_opam()
+                                          .implicit([self.build_k(backend = 'ocaml')]))
        return self._target_configure_opam
 
     def rule_build_k(self, backend):
         flags = ''
         implicit = [self.init_k_submodule()]
         if backend == 'ocaml':
-            implicit += [self.configure_opam()]
             flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
         if backend == 'java':
             flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
