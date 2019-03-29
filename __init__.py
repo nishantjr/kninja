@@ -447,8 +447,9 @@ class KProject(ninja.ninja_syntax.Writer):
     def rule_configure_opam(self):
         return self.rule( 'k-configure-opam-dev'
                         , description = '$command'
-                        , command = "$k_bindir/k-configure-opam-dev && touch $out"
+                        , command = "opam init --no-setup && $k_bindir/k-configure-opam-dev </dev/null && touch $out"
                         ) \
+                   .variable('pool', 'console') \
                    .output(self.builddir('k-configure-opam.timestamp'))
 
     def configure_opam(self):
