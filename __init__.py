@@ -16,6 +16,7 @@ import copy
 import glob as glob_module
 import os
 import sys
+import argparse
 
 def basename_no_ext(path):
     return os.path.splitext(os.path.basename(path))[0]
@@ -250,7 +251,13 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def main(self, argv = sys.argv[1:]):
         self.close()
-        os.execlp('ninja', 'ninja', '-f', self.builddir('generated.ninja'), *argv)
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--opamroot', default = self.builddir('opam'))
+        namespace, remaining = parser.parse_known_args(argv)
+        # TODO: OPAMROOT should be part of the ninja file, so that changing OPAMROOT
+        # causes a full rebuild
+        os.environ["OPAMROOT"] = namespace.opamroot
+        os.execlp('ninja', 'ninja', '-f', self.builddir('generated.ninja'), *remaining)
 
     def tangle(self, input, output = None, selector = '.k'):
         input_target = self.source(input)
