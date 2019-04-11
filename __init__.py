@@ -109,27 +109,27 @@ class KDefinition():
 
     def tests(self, expected = None, glob = None, alias = None, default = True):
         inputs = []
-        if glob != None:
+        if glob is not None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
             e = expected
-            if e == None:
+            if e is None:
                 e = append_extension(input, 'expected')
             test = self.proj.source(input) \
                             .then(self.runner_script(mode = 'run')) \
                             .then(self.proj.check(expected = e))
             if default: test.default()
             ret += [test]
-        if alias != None:
+        if alias is not None:
             ret = self.proj.alias(alias, ret)
         return ret
 
     def proofs(self, glob = None, alias = None, default = True, expected = None):
         inputs = []
-        if expected == None:
+        if expected is None:
            expected = self.proj.kninjadir('kprove.expected')
-        if glob != None:
+        if glob is not None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
@@ -138,7 +138,7 @@ class KDefinition():
                             .then(self.proj.check(expected))
             if default: test.default()
             ret += [test]
-        if alias != None:
+        if alias is not None:
             ret = self.proj.alias(alias, ret)
         return ret
 
@@ -259,7 +259,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
     def tangle(self, input, output = None, selector = '.k'):
         input_target = self.source(input)
-        if (output == None):
+        if (output is None):
             output = self.place_in_output_dir(replace_extension(input, 'k'))
         return input_target.then(self.rule_tangle().output(output).variable('tangle_selector', selector))
 
@@ -273,7 +273,7 @@ class KProject(ninja.ninja_syntax.Writer):
                   , tangle_selector = '.k'
                   , flags = ''
                   ):
-        if directory == None:
+        if directory is None:
             directory = self.builddir('defn', alias)
 
         # If a source file has extension '.md', tangle it:
@@ -418,7 +418,7 @@ class KProject(ninja.ninja_syntax.Writer):
                    .variable('path', path)
 
     def init_tangle_submodule(self):
-        if self._tangle_repo_init == None:
+        if self._tangle_repo_init is None:
             self._tangle_repo_init = self.dotTarget().then(
                     self.rule_git_submodule_init( path = self.pandoc_tangle_repository()
                                                 , timestamp_file = self.pandoc_tangle_repository('tangle.lua')
@@ -436,7 +436,7 @@ class KProject(ninja.ninja_syntax.Writer):
                    .variables(tangle_selector = tangle_selector)
 
     def init_k_submodule(self):
-        if self._k_repo_init == None:
+        if self._k_repo_init is None:
             self._k_repo_init = self.dotTarget().then(
                     self.rule_git_submodule_init( path = self.extdir('k')
                                                 , timestamp_file = self.builddir('k.init')
