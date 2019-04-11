@@ -254,8 +254,6 @@ class KProject(ninja.ninja_syntax.Writer):
         parser = argparse.ArgumentParser()
         parser.add_argument('--opamswitch', default = '4.06.1+k')
         namespace, remaining = parser.parse_known_args(argv)
-        # TODO: OPAMROOT should be part of the ninja file, so that changing OPAMROOT
-        # causes a full rebuild
         os.environ["OPAMSWITCH"] = namespace.opamswitch
         os.execlp('ninja', 'ninja', '-f', self.builddir('generated.ninja'), *remaining)
 
