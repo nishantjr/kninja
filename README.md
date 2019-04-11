@@ -30,7 +30,7 @@ used to describe how build a new target.
     -   Rules allow specifying additional implicit dependencies
         `rule.implicit([target1, target2])`, implicit outputs
         `rule.implicit_outputs([o1, o2])` and the ninja "pool" to use for the
-        job `rule.pool('console')`. 
+        job `rule.pool('console')`.
 
 A typical setup
 ===============
@@ -39,59 +39,90 @@ Here, we setup the build system for a literate K-Definition with three tests. A
 more detailed example can be found here
 <https://github.com/kframework/k-in-k/blob/master/lib/build.py>.
 
-1. Add `k`, `kninja` and `pandoc-tangle` (optional) as submodules:
+1. Add `k`, `kninja` and `pandoc-tangle` (optional) as submodules in some common directory `extdir':
 
-   ```
-   git submodule add https://github.com/kframework/k           ext/k
-   git submodule add https://github.com/nishantjr/kninja       ext/kninja
-   git submodule add https://github.com/ehildenb/pandoc-tangle ext/pandoc-tangle
-   ```
-
-2. Add a script `lib/build.py` (we call this the "generator" script):
-
-   ```
-   #!/usr/bin/env python3
-
-   from kninja import *
-   import sys
-   import os.path
-
-   # Project Definition
-   # ==================
-
-   proj = KProject()
-   mydef = proj.source('mydef.md') \
-               .then(proj.tangle().output(proj.tangleddir('mydef.k')))
-               .then(proj.kompile(backend = 'java') \
-                         .variables(directory = proj.builddir('mydef')))
-
-   def mydef_test(file, expected):                                                                              
-       proj.source(file) \
-           .then(mydef.krun()) \
-           .then(proj.check(proj.source(expected))
-                        .variables(flags = '--ignore-all-space')) \
-           .default()
-
-   mydef_test('t/foo.mydef',  't/foo.mydef.expected')
-   mydef_test('t/bar.mydef',  't/bar.mydef.expected')
-   mydef_test('t/buzz.mydef', 't/buzz.mydef.expected')
+   ```sh
+   git submodule add https://github.com/kframework/k           $extdir/k
+   git submodule add https://github.com/nishantjr/kninja       $extdir/kninja
+   git submodule add https://github.com/ehildenb/pandoc-tangle $extdir/pandoc-tangle
    ```
 
-3. Add a script (typically called `build`) at the top-level of your project:
+2. Add a script `build` (we call this the "generator" script):
 
-   ```
-   #!/usr/bin/env bash
+    ```python3
+    #!/usr/bin/env python3
 
-   set -eu
-   base="$(cd "$(dirname "$0")"; pwd)"
-   type -t ninja > /dev/null || fail "`ninja-build` not available. Giving up."
-   git submodule update --init $base/ext/
-   export PYTHONPATH="$base/ext/"
-   python3 lib/build.py
-   exec ninja -f .build/generated.ninja "$@"
-   ```
+    import os
+    import subprocess
+    import sys
 
-   Make executable: `chmod +x lib/build.py`
+    # Bootstrapping
+    # =============
+
+    subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive'])
+    extdir = '.build'
+    sys.path.append(os.path.join(os.path.dirname(__file__), extdir))
+
+    from kninja import *
+
+    # Build
+    # =====
+
+    proj = KProject(extdir = extdir)
+    def build_wasm(backend, flags = ''):
+        return proj.definition( alias             = 'wasm-' + backend
+                              , backend           = backend
+                              , main              = 'test.md'
+                              , other             = [ 'wasm.md', 'data.md', 'kwasm-lemmas.md' ]
+                              , directory         = proj.builddir('defn', backend)
+                              , runner_script     = './kwasm'
+                              , flags             = '--main-module WASM-TEST --syntax-module WASM-TEST ' \
+                                                  + flags
+                              )
+    wasm_java = build_wasm(backend = 'java')
+    wasm_ocaml = build_wasm(backend = 'ocaml', flags = '-O3 --non-strict')
+    wasm_haskell = build_wasm(backend = 'haskell')
+
+    # Testing
+    # =======
+
+    concrete_backend = wasm_ocaml
+    symbolic_backend = wasm_java
+
+    def exec_tests(defn, backend):
+        simple = defn.tests( glob = 'tests/simple/*.wast'
+                           , alias = 'test-simple-' + backend
+                           , expected = 'tests/success-' + backend + '.out'
+                           , default = False
+                           )
+        exec = proj.alias( name = 'test-exec-' + backend
+                         , targets = simple
+                         )
+        return exec
+
+    def proof_tests(defn, backend):
+        return defn.proofs( glob = 'tests/proofs/*-spec.k'
+                          , alias = 'test-proofs-' + backend
+                          , default = False
+                          )
+
+    exec_tests(wasm_java, 'java')
+    exec_tests(wasm_ocaml, 'ocaml')
+    proof_tests(wasm_java, 'java')
+    proof_tests(wasm_haskell, 'haskell')
+
+    proj.alias(name = 'test-exec',   targets = 'test-exec-java')
+    proj.alias(name = 'test-simple', targets = 'test-simple-java')
+    proj.alias(name = 'test-proofs', targets = 'test-proofs-java')
+    proj.default(['test-exec', 'test-simple', 'test-proofs'])
+
+    # Main
+    # ====
+
+    proj.main()
+    ```
+
+   Make executable: `chmod u+x build`
 
 Things we'd like
 ================
