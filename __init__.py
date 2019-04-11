@@ -252,11 +252,11 @@ class KProject(ninja.ninja_syntax.Writer):
     def main(self, argv = sys.argv[1:]):
         self.close()
         parser = argparse.ArgumentParser()
-        parser.add_argument('--opamroot', default = self.builddir('opam'))
+        parser.add_argument('--opamswitch', default = '4.06.1+k')
         namespace, remaining = parser.parse_known_args(argv)
         # TODO: OPAMROOT should be part of the ninja file, so that changing OPAMROOT
         # causes a full rebuild
-        os.environ["OPAMROOT"] = namespace.opamroot
+        os.environ["OPAMSWITCH"] = namespace.opamswitch
         os.execlp('ninja', 'ninja', '-f', self.builddir('generated.ninja'), *remaining)
 
     def tangle(self, input, output = None, selector = '.k'):
@@ -371,11 +371,6 @@ class KProject(ninja.ninja_syntax.Writer):
     def tangleddir(self, *paths):
         return self.builddir('tangled', *paths)
 
-# Directory to build OPAM in. We use this instead of `~/.opam` so that we don't
-# intefere with system functionality.
-    def opamroot(self, *paths):
-        return self.builddir('opam', *paths)
-
 # If a (relative) output path is not in the buiddir, place it there. Otherwise
 # return the same path unchanged.
     def place_in_output_dir(self, path):
@@ -390,7 +385,6 @@ class KProject(ninja.ninja_syntax.Writer):
         self.variable('ninja_required_version', '1.7')
         self.variable('builddir', self.builddir())
         # TODO: Remove underscores for consistancy
-        self.variable('opam_root', self.opamroot())
         self.variable('k_repository', self.krepodir())
         self.variable('k_bindir', self.kbindir())
         self.variable('tangle_repository', self.pandoc_tangle_repository())
