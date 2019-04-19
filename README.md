@@ -5,39 +5,10 @@ possible, while still simplifying common advanced usage patterns. KNinja is a
 bit opinionated in the directory layout of the project (but allows for some
 configuration via ninja variables).
 
-Overview
-========
-
-`kninja` tries to expose the simplicity of Ninja in defining the build process
-as a multigraph of build edges and targets while abstracting common patterns
-used in K projects. Most objects exposed by the build system are either
-"Targets" that represent files or phoney targets to be built, or "Rules"
-used to describe how build a new target.
-
--   Source files are targets (constructed with `proj.source('foo.k')`)
--   Targets define a `then` function that takes a rule and returns a target.
-    Thus rule applications to targets can be chained together e.g.
-    `proj.source('foo.k').then(proj.tangle()...).then(proj.kompile()...)`
--   Rule applications allow a few points for customizing invocation:
-    -   Many rules attempt to guess a suitable output file name to reduce
-        unneccessary clutter in the definition. `rule.output(target_path)` lets
-        you override this. You may also specify just the extension of to be used
-        rather than the entire output path.
-    -   Rules allow specifying the values to set ninja variables to (e.g.
-        `rule.variables(backend = 'java')`). Typically rules wrapping command
-        line commands will allow a `flags` variable for specifying additional
-        parameters.
-    -   Rules allow specifying additional implicit dependencies
-        `rule.implicit([target1, target2])`, implicit outputs
-        `rule.implicit_outputs([o1, o2])` and the ninja "pool" to use for the
-        job `rule.pool('console')`.
-
 A typical setup
 ===============
 
-Here, we setup the build system for a literate K-Definition with three tests. A
-more detailed example can be found here
-<https://github.com/kframework/k-in-k/blob/master/lib/build.py>.
+Here, we setup the build system for a literate K-Definition with three tests.
 
 1. Add `k`, `kninja` and `pandoc-tangle` (optional) as submodules in some common directory `extdir':
 
@@ -122,7 +93,35 @@ more detailed example can be found here
     proj.main()
     ```
 
-   Make executable: `chmod u+x build`
+    Make executable: `chmod u+x build`
+
+Internals
+=========
+
+`kninja` tries to expose the simplicity of Ninja in defining the build process
+as a multigraph of build edges and targets while abstracting common patterns
+used in K projects. Most objects exposed by the build system are either
+"Targets" that represent files or phoney targets to be built, or "Rules"
+used to describe how build a new target.
+
+-   Source files are targets (constructed with `proj.source('foo.k')`)
+-   Targets define a `then` function that takes a rule and returns a target.
+    Thus rule applications to targets can be chained together e.g.
+    `proj.source('foo.k').then(proj.tangle()...).then(proj.kompile()...)`
+-   Rule applications allow a few points for customizing invocation:
+    -   Many rules attempt to guess a suitable output file name to reduce
+        unneccessary clutter in the definition. `rule.output(target_path)` lets
+        you override this. You may also specify just the extension of to be used
+        rather than the entire output path.
+    -   Rules allow specifying the values to set ninja variables to (e.g.
+        `rule.variables(backend = 'java')`). Typically rules wrapping command
+        line commands will allow a `flags` variable for specifying additional
+        parameters.
+    -   Rules allow specifying additional implicit dependencies
+        `rule.implicit([target1, target2])`, implicit outputs
+        `rule.implicit_outputs([o1, o2])` and the ninja "pool" to use for the
+        job `rule.pool('console')`.
+
 
 Things we'd like
 ================
