@@ -2,13 +2,14 @@ import argparse
 import functools
 import os
 import sys
+from collections import OrderedDict
 
 class KProject():
     ''' A KProject defines the directory structure of a project '''
 
     def __init__(self, extdir = 'ext'):
         self._extdir = extdir
-        self._k_definitions = {}
+        self._k_definitions = OrderedDict()
 
     def extdir(self, *paths):
         ''' Directory for storing submodules used by KNinja '''
@@ -68,10 +69,11 @@ class KDefinition():
         return os.path.join(self._directory, *path)
 
 class KRunner():
-    def __init__(self, proj):
+    def __init__(self, proj, default_definition = None):
         self.parser = argparse.ArgumentParser()
         self.proj = proj
         parser = self.parser
+        self.default_definition = default_definition
 
         # TODO: Should we handle different --opamswitch args passed to `./build`
         # and the runner script?
@@ -98,12 +100,12 @@ class KRunner():
         prove_parser.set_defaults(func = functools.partial(self.execute_kprove, self))
 
     def add_definition_argument(self, subparser):
-        definition_names = self.proj._k_definitions.keys()
+        defs = self.proj._k_definitions
         subparser.add_argument( '--definition'
-                                , choices = definition_names
-                                , help = 'Alias of definition'
-                                , required = True
-                                )
+                              , choices = list(defs) # Keys in the OrderedDict
+                              , default = list(defs)[0]
+                              , help = 'Alias of definition'
+                              )
 
     def main(self, argv = sys.argv[1:]):
         namespace = self.parser.parse_args(argv)
