@@ -150,11 +150,12 @@ class KDefinition():
         # the `ext` flag is tied to the rule instead of the build edge
         return self.proj.rule( 'runner-script-' + self._alias + '-' + mode
                              , description = mode + ': ' + self._alias + ' $in'
-                             , command = self._runner_script + ' ' + mode + ' --definition "$definition" "$in" ' + " ".join(flags) + ' > "$out"'
+                             , command = self._runner_script + ' ' + mode + ' --definition "$definition" "$in" $flags > "$out"'
                              , ext = self._alias + '-' + mode
                              ) \
                              .variable('definition', self._alias) \
-                             .implicit([self.target])
+                             .implicit([self.target]) \
+                             .variable('flags', flags)
 
     def krun(self, krun_flags = '', extension = None, runner = None):
         return self.proj.rule( 'krun'
