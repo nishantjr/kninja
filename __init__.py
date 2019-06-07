@@ -107,7 +107,7 @@ class KDefinition():
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def tests(self, expected = None, glob = None, alias = None, default = True, flags = []):
+    def tests(self, expected = None, glob = None, alias = None, default = True, flags = ''):
         inputs = []
         if glob is not None:
             inputs += glob_module.glob(glob)
@@ -125,7 +125,7 @@ class KDefinition():
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, glob = None, alias = None, default = True, expected = None, flags = []):
+    def proofs(self, glob = None, alias = None, default = True, expected = None, flags = ''):
         inputs = []
         if expected is None:
            expected = self.proj.kninjadir('kprove.expected')
@@ -145,7 +145,7 @@ class KDefinition():
     """ Low Level Interface """
 
     # mode: run|prove
-    def runner_script(self, mode, flags = []):
+    def runner_script(self, mode, flags = ''):
         # TODO: We use a different rule for each kompiled definition, since
         # the `ext` flag is tied to the rule instead of the build edge
         return self.proj.rule( 'runner-script-' + self._alias + '-' + mode
