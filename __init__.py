@@ -279,6 +279,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
         # If a source file has extension '.md', tangle it:
         def target_from_source(source):
+            if type(source) is Target: return source
             if get_extension(source) == 'md':
                 return self.tangle( source
                                   , selector = tangle_selector
