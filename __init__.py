@@ -150,7 +150,7 @@ class KDefinition():
         # the `ext` flag is tied to the rule instead of the build edge
         return self.proj.rule( 'runner-script-' + self._alias + '-' + mode
                              , description = mode + ': ' + self._alias + ' $in'
-                             , command = self._runner_script + ' ' + mode + ' --definition "$definition" "$in" $flags > "$out"'
+                             , command = self._runner_script + ' ' + mode + ' --definition "$definition" "$in" $flags > "$out" || (cat $out ; false)'
                              , ext = self._alias + '-' + mode
                              ) \
                              .variable('definition', self._alias) \
@@ -160,7 +160,7 @@ class KDefinition():
     def krun(self, krun_flags = '', extension = None, runner = None):
         return self.proj.rule( 'krun'
                              , description = 'krun: $in ($directory)'
-                             , command = '$env "$k_bindir/krun" $flags --directory $directory $in > $out'
+                             , command = '$env "$k_bindir/krun" $flags --directory $directory $in > $out || (cat $out ; false)'
                              , ext = self._krun_extension
                              ) \
                              .variable('directory', self.directory()) \
@@ -171,7 +171,7 @@ class KDefinition():
     def kast(self):
         return self.proj.rule( 'kast'
                              , description = 'kast: $in ($directory)'
-                             , command     = '$env "$k_bindir/kast" $flags --directory "$directory" "$in" > "$out"'
+                             , command     = '$env "$k_bindir/kast" $flags --directory "$directory" "$in" > "$out" || (cat $out ; false)'
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
