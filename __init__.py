@@ -18,6 +18,8 @@ import os
 import sys
 import argparse
 
+glob = glob_module.glob
+
 def basename_no_ext(path):
     return os.path.splitext(os.path.basename(path))[0]
 def get_extension(path):
@@ -107,8 +109,7 @@ class KDefinition():
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def tests(self, expected = None, glob = None, alias = None, default = True, flags = ''):
-        inputs = []
+    def tests(self, expected = None, inputs = [], implicit_inputs = [], glob = None, alias = None, default = True, flags = ''):
         if glob is not None:
             inputs += glob_module.glob(glob)
         ret = []
@@ -117,7 +118,7 @@ class KDefinition():
             if e is None:
                 e = append_extension(input, 'expected')
             test = self.proj.source(input) \
-                            .then(self.runner_script(mode = 'run', flags = flags)) \
+                            .then(self.runner_script(mode = 'run', flags = flags).implicit(implicit_inputs)) \
                             .then(self.proj.check(expected = e))
             if default: test.default()
             ret += [test]
