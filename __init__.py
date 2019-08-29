@@ -432,7 +432,7 @@ class KProject(ninja.ninja_syntax.Writer):
         return self.rule( 'tangle',
                           description = 'tangle: $in',
                           command     = 'LUA_PATH=$tangle_repository/?.lua '
-                                      + 'pandoc $in -o $out --metadata=code:$tangle_selector --to "$tangle_repository/tangle.lua"'
+                                      + 'pandoc "$in" -o "$out" "--metadata=code:$tangle_selector" --to "$tangle_repository/tangle.lua"'
                         ) \
                    .ext('k') \
                    .implicit([self.init_tangle_submodule()]) \
