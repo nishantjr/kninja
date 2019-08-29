@@ -117,9 +117,9 @@ class KDefinition():
             e = expected
             if e is None:
                 e = append_extension(input, 'expected')
-            test = self.proj.source(input) \
-                            .then(self.runner_script(mode = 'run', flags = flags).implicit(implicit_inputs)) \
-                            .then(self.proj.check(expected = e))
+            if type(input) is str: input = self.proj.source(input)
+            test = input.then(self.runner_script(mode = 'run', flags = flags).implicit(implicit_inputs)) \
+                        .then(self.proj.check(expected = e))
             if default: test.default()
             ret += [test]
         if alias is not None:
