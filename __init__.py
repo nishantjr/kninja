@@ -305,7 +305,7 @@ class KProject(ninja.ninja_syntax.Writer):
         elif backend == 'java':
             output = os.path.join(kompiled_dir, 'timestamp')
         elif backend == 'haskell':
-            output = os.path.join(kompiled_dir, 'kore.txt')
+            output = os.path.join(kompiled_dir, 'definition.kore')
         else:
             assert false, 'Unknown backend "' + backend + "'"
 
