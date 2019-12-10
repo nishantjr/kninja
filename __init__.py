@@ -254,9 +254,7 @@ class KProject(ninja.ninja_syntax.Writer):
     def main(self, argv = sys.argv[1:]):
         self.close()
         parser = argparse.ArgumentParser()
-        parser.add_argument('--opamswitch', default = '4.06.1+k')
         namespace, remaining = parser.parse_known_args(argv)
-        os.environ["OPAMSWITCH"] = namespace.opamswitch
         os.execlp('ninja', 'ninja', '-f', self.builddir('generated.ninja'), *remaining)
 
     def tangle(self, input, output = None, selector = '.k'):
