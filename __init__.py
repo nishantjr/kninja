@@ -117,7 +117,7 @@ class KDefinition():
             e = expected
             if e is None:
                 e = append_extension(input, 'expected')
-            if type(input) is str: input = self.proj.source(input)
+            input = self.proj.to_target(input)
             test = input.then(self.runner_script(mode = 'run', flags = flags).implicit(implicit_inputs)) \
                         .then(self.proj.check(expected = e))
             if default: test.default()
@@ -126,17 +126,17 @@ class KDefinition():
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, glob = None, alias = None, default = True, expected = None, flags = ''):
-        inputs = []
+    def proofs(self, inputs = [], glob = None, alias = None, default = True, expected = None, flags = '', tangle_selector = '.k'):
         if expected is None:
            expected = self.proj.kninjadir('kprove.expected')
         if glob is not None:
             inputs += glob_module.glob(glob)
         ret = []
         for input in inputs:
-            test = self.proj.source(input) \
-                            .then(self.runner_script(mode = 'prove', flags = flags)) \
-                            .then(self.proj.check(expected))
+            input = self.proj.to_target(input)
+            input = self.proj.tangle_if_markdown(input = input, directory = self.directory(), selector = tangle_selector)
+            test = input.then(self.runner_script(mode = 'prove', flags = flags)) \
+                        .then(self.proj.check(expected))
             if default: test.default()
             ret += [test]
         if alias is not None:
@@ -257,11 +257,24 @@ class KProject(ninja.ninja_syntax.Writer):
         namespace, remaining = parser.parse_known_args(argv)
         os.execlp('ninja', 'ninja', '-f', self.builddir('generated.ninja'), *remaining)
 
+    def to_target(self, input):
+        if type(input) is Target: return input
+        if type(input) is str:    return self.source(input)
+        assert(false)
+
     def tangle(self, input, output = None, selector = '.k'):
-        input_target = self.source(input)
+        input_target = self.to_target(input)
         if (output is None):
             output = self.place_in_output_dir(replace_extension(input, 'k'))
         return input_target.then(self.rule_tangle().output(output).variable('tangle_selector', selector))
+
+    def tangle_if_markdown(self, input, directory, **kwargs):
+        assert(type(input) == Target)
+        if get_extension(input.path) == 'md':
+            output = place_in_dir(replace_extension(input.path, 'k'), directory)
+            assert(type(output) == str)
+            return self.tangle(input = input, output = output, **kwargs)
+        return input
 
     def definition( self
                   , alias
@@ -278,15 +291,13 @@ class KProject(ninja.ninja_syntax.Writer):
 
         # If a source file has extension '.md', tangle it:
         def target_from_source(source):
-            if type(source) is Target: return source
-            if get_extension(source) == 'md':
-                return self.tangle( source
-                                  , selector = tangle_selector
-                                  , output = place_in_dir( replace_extension(source, 'k')
-                                                         , directory
-                                                         )
-                                  )
-            return self.source(source)
+            source = self.to_target(source)
+            assert(type(source) == Target)
+            source = self.tangle_if_markdown( source
+                                            , selector  = tangle_selector
+                                            , directory = directory
+                                            )
+            return source
         main = target_from_source(main)
         other = map(target_from_source, other)
 
@@ -401,6 +412,7 @@ class KProject(ninja.ninja_syntax.Writer):
         return rule
 
     def source(self, path):
+        assert(type(path) == str)
         return Target(self, path)
 
     # fake target, for when a build-edge has no inputs
