@@ -109,7 +109,11 @@ class KDefinition():
     def directory(self, *path):
         return os.path.join(self._directory, *path)
 
-    def tests(self, expected = None, inputs = [], implicit_inputs = [], glob = None, alias = None, default = True, flags = ''):
+    def tests(self, expected = None, inputs = None, implicit_inputs = None, glob = None, alias = None, default = True, flags = ''):
+        if inputs is None:
+            inputs = []
+        if implicit_inputs is None:
+            implicit_inputs = []
         if glob is not None:
             inputs += glob_module.glob(glob)
         ret = []
