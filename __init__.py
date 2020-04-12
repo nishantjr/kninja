@@ -251,6 +251,10 @@ class KProject(ninja.ninja_syntax.Writer):
         if not os.path.exists(self.builddir()):
             os.mkdir(self.builddir())
         super().__init__(open(self.builddir('generated.ninja'), 'w'))
+
+        # Always define at least one default target. Otherwise, all targets are run (including clean)
+        self.alias('dummy', []).default()
+        
         self.generate_ninja()
 
     """ High level interface """
