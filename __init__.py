@@ -288,7 +288,7 @@ class KProject(ninja.ninja_syntax.Writer):
                   , alias
                   , backend
                   , main
-                  , runner_script
+                  , runner_script = None
                   , other = []
                   , directory = None
                   , tangle_selector = '.k'
