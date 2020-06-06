@@ -130,7 +130,7 @@ class KDefinition():
             ret = self.proj.alias(alias, ret)
         return ret
 
-    def proofs(self, inputs = [], glob = None, alias = None, default = True, expected = None, flags = '', tangle_selector = '.k'):
+    def proofs(self, inputs = [], glob = None, alias = None, default = True, expected = None, flags = ''):
         if expected is None:
            expected = self.proj.kninjadir('kprove.expected')
         if glob is not None:
@@ -138,7 +138,6 @@ class KDefinition():
         ret = []
         for input in inputs:
             input = self.proj.to_target(input)
-            input = self.proj.tangle_if_markdown(input = input, directory = self.directory(), selector = tangle_selector)
             test = input.then(self.runner_script(mode = 'prove', flags = flags)) \
                         .then(self.proj.check(expected))
             if default: test.default()
@@ -244,7 +243,6 @@ class KProject(ninja.ninja_syntax.Writer):
     def __init__(self, extdir = 'ext'):
         self.written_rules = {}
         self._backend_targets =  dict(java=None, haskell=None, llvm=None)
-        self._tangle_repo_init = None
         self._k_repo_init = None
         self._extdir = extdir
         if not os.path.exists(self.builddir()):
@@ -269,20 +267,6 @@ class KProject(ninja.ninja_syntax.Writer):
         if type(input) is str:    return self.source(input)
         assert(false)
 
-    def tangle(self, input, output = None, selector = '.k'):
-        input_target = self.to_target(input)
-        if (output is None):
-            output = self.place_in_output_dir(replace_extension(input, 'k'))
-        return input_target.then(self.rule_tangle().output(output).variable('tangle_selector', selector))
-
-    def tangle_if_markdown(self, input, directory, **kwargs):
-        assert(type(input) == Target)
-        if get_extension(input.path) == 'md':
-            output = place_in_dir(replace_extension(input.path, 'k'), directory)
-            assert(type(output) == str)
-            return self.tangle(input = input, output = output, **kwargs)
-        return input
-
     def definition( self
                   , alias
                   , backend
@@ -290,20 +274,14 @@ class KProject(ninja.ninja_syntax.Writer):
                   , runner_script = None
                   , other = []
                   , directory = None
-                  , tangle_selector = '.k'
                   , flags = ''
                   ):
         if directory is None:
             directory = self.builddir('defn', alias)
 
-        # If a source file has extension '.md', tangle it:
         def target_from_source(source):
             source = self.to_target(source)
             assert(type(source) == Target)
-            source = self.tangle_if_markdown( source
-                                            , selector  = tangle_selector
-                                            , directory = directory
-                                            )
             return source
         main = target_from_source(main)
         other = map(target_from_source, other)
@@ -361,10 +339,6 @@ class KProject(ninja.ninja_syntax.Writer):
     def krepodir(self, *paths):
         return self.extdir('k', *paths)
 
-# pandoc-tangle repository
-    def pandoc_tangle_repository(self, *paths):
-        return self.extdir('pandoc-tangle', *paths)
-
 # Directory where K binaries are stored
     def kbindir(self, *paths):
         return self.krepodir("k-distribution/target/release/k/bin", *paths)
@@ -379,10 +353,6 @@ class KProject(ninja.ninja_syntax.Writer):
 # The project's main build directory
     def builddir(self, *paths):
         return os.path.join('.build', *paths)
-
-# Directory to output tangled files in
-    def tangleddir(self, *paths):
-        return self.builddir('tangled', *paths)
 
 # If a (relative) output path is not in the buiddir, place it there. Otherwise
 # return the same path unchanged.
@@ -400,7 +370,6 @@ class KProject(ninja.ninja_syntax.Writer):
         # TODO: Remove underscores for consistancy
         self.variable('k_repository', self.krepodir())
         self.variable('k_bindir', self.kbindir())
-        self.variable('tangle_repository', self.pandoc_tangle_repository())
         self.rule('clean'
                  , description = 'cleaning'
                  , command = 'ninja -t clean ; rm -rf "$builddir" ; git submodule update --init --recursive'
@@ -432,24 +401,6 @@ class KProject(ninja.ninja_syntax.Writer):
                         ) \
                    .output(timestamp_file) \
                    .variable('path', path)
-
-    def init_tangle_submodule(self):
-        if self._tangle_repo_init is None:
-            self._tangle_repo_init = self.dotTarget().then(
-                    self.rule_git_submodule_init( path = self.pandoc_tangle_repository()
-                                                , timestamp_file = self.pandoc_tangle_repository('tangle.lua')
-                                                ))
-        return self._tangle_repo_init
-
-    def rule_tangle(self, tangle_selector = '.k', ext = 'k'):
-        return self.rule( 'tangle',
-                          description = 'tangle: $in',
-                          command     = 'LUA_PATH=$tangle_repository/?.lua '
-                                      + 'pandoc "$in" -o "$out" "--metadata=code:$tangle_selector" --to "$tangle_repository/tangle.lua"'
-                        ) \
-                   .ext('k') \
-                   .implicit([self.init_tangle_submodule()]) \
-                   .variables(tangle_selector = tangle_selector)
 
     def init_k_submodule(self):
         if self._k_repo_init is None:

@@ -19,10 +19,6 @@ class KProject():
         ''' Path to the K Framework '''
         return self.extdir('k', *paths)
 
-    def pandoc_tangle_repository(self, *paths):
-        ''' pandoc-tangle repository '''
-        return self.extdir('pandoc-tangle', *paths)
-
     def kbindir(self, *paths):
         ''' Directory where K binaries are stored '''
         return self.krepodir("k-distribution/target/release/k/bin", *paths)
