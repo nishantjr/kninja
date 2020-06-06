@@ -75,10 +75,6 @@ class KRunner():
         parser = self.parser
         self.default_definition = default_definition
 
-        # TODO: Should we handle different --opamswitch args passed to `./build`
-        # and the runner script?
-        parser.add_argument('--opamswitch', default = '4.06.1+k')
-
         subparsers = parser.add_subparsers()
 
         kast_parser = subparsers.add_parser('kast', help = 'Run a program against a definition')
@@ -109,7 +105,6 @@ class KRunner():
 
     def main(self, argv = sys.argv[1:]):
         namespace = self.parser.parse_args(argv)
-        os.environ["OPAMSWITCH"] = namespace.opamswitch
         namespace.func.func(namespace)
 
     def execute_kast(self, args):
@@ -122,12 +117,7 @@ class KRunner():
     def execute_krun(self, args):
         definition = self.proj._k_definitions[args.definition]
         binary = self.proj.kbindir('krun')
-        opam_config_exec = []
-        if definition.backend == 'ocaml':
-            opam_config_exec = ['opam', 'config', 'exec', '--']
-            binary = 'opam'
         os.execlp( binary
-                 , *opam_config_exec
                  , self.proj.kbindir('krun')
                  , '--directory', definition.directory()
                  , args.program

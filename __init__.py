@@ -243,8 +243,7 @@ class Rule():
 class KProject(ninja.ninja_syntax.Writer):
     def __init__(self, extdir = 'ext'):
         self.written_rules = {}
-        self._backend_targets =  dict(java=None, ocaml=None, haskell=None, llvm=None)
-        self._target_configure_opam = None
+        self._backend_targets =  dict(java=None, haskell=None, llvm=None)
         self._tangle_repo_init = None
         self._k_repo_init = None
         self._extdir = extdir
@@ -313,11 +312,7 @@ class KProject(ninja.ninja_syntax.Writer):
         output = None
         env = ''
         implicit_inputs = [self.build_k(backend)]
-        if backend == 'ocaml':
-            output = os.path.join(kompiled_dir, 'interpreter')
-            implicit_inputs += [self.configure_opam()]
-            env = 'opam config exec --'
-        elif backend == 'llvm':
+        if backend == 'llvm':
             output = os.path.join(kompiled_dir, 'interpreter')
         elif backend == 'java':
             output = os.path.join(kompiled_dir, 'timestamp')
@@ -464,26 +459,9 @@ class KProject(ninja.ninja_syntax.Writer):
                                                 ).variable('flags', '--recursive'))
         return self._k_repo_init
 
-    def rule_configure_opam(self):
-        return self.rule( 'k-configure-opam-dev'
-                        , description = '$command'
-                        , command = "opam init --no-setup && $k_bindir/k-configure-opam-dev </dev/null && touch $out"
-                        ) \
-                   .variable('pool', 'console') \
-                   .output(self.builddir('k-configure-opam.timestamp'))
-
-    def configure_opam(self):
-       if not(self._target_configure_opam):
-           self._target_configure_opam = \
-                self.dotTarget().then(self.rule_configure_opam()
-                                          .implicit([self.build_k(backend = 'ocaml')]))
-       return self._target_configure_opam
-
     def rule_build_k(self, backend):
         flags = ''
         implicit = [self.init_k_submodule()]
-        if backend == 'ocaml':
-            flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
         if backend == 'java':
             flags = '-Dllvm.backend.skip -Dhaskell.backend.skip'
         if backend == 'haskell':
@@ -514,22 +492,6 @@ class KProject(ninja.ninja_syntax.Writer):
                          , command     = '$env "$k_bindir/kompile" --backend "$backend" $flags '
                                        + '--directory "$directory" $in'
                          )
-
-    def ocamlfind(self):
-        return self.rule( 'ocamlfind'
-                        , description = 'ocamlfind: $out'
-                        , command = 'ocamlfind opt -o $out $flags $in'
-                        )
-
-    # TODO: To have the same interface as kompile, `.then()` needs to allow
-    # taking a list of rules rather than a single one.
-    def kompile_interpreter( self, main_file, directory
-                           , additional_ml_sources = []
-                           , kompile_flags = ""
-                           , ocamlfind_flags = ""
-                           , packages = []
-                           ):
-        assert false, "Unsupported"
 
     def check(self, expected):
         return self.rule( 'check-test-result'
