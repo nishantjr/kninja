@@ -76,7 +76,7 @@ class KDefinition():
                 , proj
                 , alias
                 , directory
-                , kompiled_dirname
+                , kompiled_dir
                 , target
                 , backend
                 , runner_script
@@ -88,6 +88,7 @@ class KDefinition():
         self._alias = alias
         self._backend = backend
         self._directory = directory
+        self._kompiled_dir = kompiled_dir
         self._kprove_extension = kprove_extension
         self._krun_env = krun_env
         self._krun_extension = krun_extension
@@ -108,6 +109,9 @@ class KDefinition():
 
     def directory(self, *path):
         return os.path.join(self._directory, *path)
+
+    def kompiled_dir(self, *path):
+        return os.path.join(self._kompiled_dir, *path)
 
     def tests(self, expected = None, inputs = None, implicit_inputs = None, glob = None, alias = None, default = True, flags = ''):
         if inputs is None:
@@ -339,9 +343,16 @@ class KProject(ninja.ninja_syntax.Writer):
     def krepodir(self, *paths):
         return self.extdir('k', *paths)
 
+# K release dir
+    def kreleasedir(self, *paths):
+        return self.krepodir('k-distribution/target/release/k/', *paths)
+
 # Directory where K binaries are stored
     def kbindir(self, *paths):
-        return self.krepodir("k-distribution/target/release/k/bin", *paths)
+        return self.kreleasedir("bin", *paths)
+
+    def klibdir(self, *paths):
+        return self.kreleasedir("lib/kframework", *paths)
 
 # Path to the KNinja project
     def kninjadir(self, *paths):
