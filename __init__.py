@@ -19,6 +19,15 @@ import sys
 import argparse
 
 glob = glob_module.glob
+def readlines(file):
+    """ Read lines from a file. Useful for lists of failing tests etc."""
+    with open(file) as f_in:
+        lines = list(filter(None, (line.rstrip() for line in f_in)))
+    return lines
+
+def filter_out(l1, l2):
+    """ remove l2 from l1. Does not preserve order """
+    return list(set(l1) - set(l2))
 
 def basename_no_ext(path):
     return os.path.splitext(os.path.basename(path))[0]
