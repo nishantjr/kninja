@@ -280,6 +280,14 @@ class KProject(ninja.ninja_syntax.Writer):
         if type(input) is str:    return self.source(input)
         assert(false)
 
+    def suite(self, name, inputs, runner, default = True):
+        tests = []
+        for input in inputs:
+            tests += [runner(input)]
+        alias = self.alias(name, tests)
+        if default: self.default([alias])
+        return alias
+
     def definition( self
                   , alias
                   , backend
