@@ -17,6 +17,7 @@ import glob as glob_module
 import os
 import sys
 import argparse
+from distutils.spawn import find_executable
 
 glob = glob_module.glob
 def readlines(file):
@@ -253,11 +254,20 @@ class Rule():
 # A KProject manages a single `ninja` build file.
 
 class KProject(ninja.ninja_syntax.Writer):
-    def __init__(self, extdir = 'ext'):
+    def __init__(self, use_system_k = ('KNINJA_USE_SYSTEM_K' in os.environ), extdir = 'ext'):
         self.written_rules = {}
         self._backend_targets =  dict(java=None, haskell=None, llvm=None)
         self._k_repo_init = None
         self._extdir = extdir
+
+        self.use_system_k = use_system_k
+        if use_system_k:
+            self._k_release_dir = os.path.dirname(os.path.dirname(find_executable('kompile')))
+        else:
+            self._k_release_dir = self.krepodir('k-distribution/target/release/k/')
+        print('use_system_k', self.use_system_k)
+        print('k', self.kbindir('k'))
+
         if not os.path.exists(self.builddir()):
             os.mkdir(self.builddir())
         super().__init__(open(self.builddir('generated.ninja'), 'w'))
@@ -310,7 +320,8 @@ class KProject(ninja.ninja_syntax.Writer):
         kompiled_dir =  os.path.join(directory, basename_no_ext(main.path) + '-kompiled')
         output = None
         env = ''
-        implicit_inputs = [self.build_k(backend)]
+        implicit_inputs = []
+        if not self.use_system_k: implicit_inputs += [self.build_k(backend)]
         if backend == 'llvm':
             output = os.path.join(kompiled_dir, 'interpreter')
         elif backend == 'java':
@@ -362,7 +373,7 @@ class KProject(ninja.ninja_syntax.Writer):
 
 # K release dir
     def kreleasedir(self, *paths):
-        return self.krepodir('k-distribution/target/release/k/', *paths)
+        return os.path.join(self._k_release_dir, *paths)
 
 # Directory where K binaries are stored
     def kbindir(self, *paths):
