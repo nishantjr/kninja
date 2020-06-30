@@ -17,7 +17,7 @@ import glob as glob_module
 import os
 import sys
 import argparse
-from distutils.spawn import find_executable
+from shutil import which
 
 glob = glob_module.glob
 def readlines(file):
@@ -262,7 +262,9 @@ class KProject(ninja.ninja_syntax.Writer):
 
         self.use_system_k = use_system_k
         if use_system_k:
-            self._k_release_dir = os.path.dirname(os.path.dirname(find_executable('kompile')))
+            kompile = which('kompile')
+            if not kompile: raise RuntimeError('"kompile" not found in PATH')
+            self._k_release_dir = os.path.dirname(os.path.dirname(kompile))
         else:
             self._k_release_dir = self.krepodir('k-distribution/target/release/k/')
         print('use_system_k', self.use_system_k)
