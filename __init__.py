@@ -267,6 +267,7 @@ class KProject(ninja.ninja_syntax.Writer):
             self._k_release_dir = os.path.dirname(os.path.dirname(kompile))
         else:
             self._k_release_dir = self.krepodir('k-distribution/target/release/k/')
+            os.environ['PATH'] = self.kbindir() + ':' + os.environ['PATH']
         print('use_system_k', self.use_system_k)
         print('k', self.kbindir('k'))
 
@@ -410,7 +411,6 @@ class KProject(ninja.ninja_syntax.Writer):
         self.variable('builddir', self.builddir())
         # TODO: Remove underscores for consistancy
         self.variable('k_repository', self.krepodir())
-        self.variable('k_bindir', self.kbindir())
         self.rule('clean'
                  , description = 'cleaning'
                  , command = 'ninja -t clean ; rm -rf "$builddir" ; git submodule update --init --recursive'
@@ -481,7 +481,7 @@ class KProject(ninja.ninja_syntax.Writer):
     def rule_kompile(self):
         return  self.rule( 'kompile'
                          , description = 'kompile: $in ($backend)'
-                         , command     = '$env "$k_bindir/kompile" --backend "$backend" $flags '
+                         , command     = '$env "kompile" --backend "$backend" $flags '
                                        + '--directory "$directory" $in'
                          )
 
