@@ -26,13 +26,13 @@ def readlines(file):
         Filters empty lines, and comments.
     """
 
-    def is_comment(line): return line.startswith('#')
-    def is_empty(line):   return line == ""
+    def remove_comments(line): return line.split('#')[0]
+    def is_empty(line):        return line == ""
 
     with open(file) as f_in:
         lines = f_in
+        lines = map(remove_comments, lines)
         lines = filter(None, map(str.rstrip, lines))
-        lines = filterfalse(is_comment, lines)
         lines = filterfalse(is_empty, lines)
         lines = list(lines)
     return lines
