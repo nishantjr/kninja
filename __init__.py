@@ -18,12 +18,23 @@ import os
 import sys
 import argparse
 from shutil import which
+from itertools import filterfalse
 
 glob = glob_module.glob
 def readlines(file):
-    """ Read lines from a file. Useful for lists of failing tests etc."""
+    """ Read lines from a file. Useful for lists of failing tests etc.
+        Filters empty lines, and comments.
+    """
+
+    def is_comment(line): return line.startswith('#')
+    def is_empty(line):   return line == ""
+
     with open(file) as f_in:
-        lines = list(filter(None, (line.rstrip() for line in f_in)))
+        lines = f_in
+        lines = filter(None, map(str.rstrip, lines))
+        lines = filterfalse(is_comment, lines)
+        lines = filterfalse(is_empty, lines)
+        lines = list(lines)
     return lines
 
 def filter_out(l1, l2):
