@@ -189,7 +189,7 @@ class KDefinition():
     def krun(self, krun_flags = '', extension = None, runner = None):
         return self.proj.rule( 'krun'
                              , description = 'krun: $in ($directory)'
-                             , command = '$env "$k_bindir/krun" $flags --directory $directory $in > $out || (cat $out ; false)'
+                             , command = '$env krun $flags --directory $directory $in > $out || (cat $out ; false)'
                              , ext = self._krun_extension
                              ) \
                              .variable('directory', self.directory()) \
@@ -200,7 +200,7 @@ class KDefinition():
     def kast(self):
         return self.proj.rule( 'kast'
                              , description = 'kast: $in ($directory)'
-                             , command     = '$env "$k_bindir/kast" $flags --directory "$directory" "$in" > "$out" || (cat $out ; false)'
+                             , command     = '$env kast $flags --directory "$directory" "$in" > "$out" || (cat $out ; false)'
                              , ext = 'kast'
                              ) \
                              .variables(directory = self.directory()) \
@@ -212,7 +212,7 @@ class KDefinition():
         # I'm not sure if there is a better way.
         return self.proj.rule( 'kprove'
                              , description = 'kprove: $in ($directory)'
-                             , command     = '$env "$k_bindir/kprove" $flags --directory "$directory" "$in" > "$out" || (cat "$out"; false)'
+                             , command     = '$env kprove $flags --directory "$directory" "$in" > "$out" || (cat "$out"; false)'
                              , ext = self._kprove_extension
                              ) \
                              .variables(directory = self.directory()) \
