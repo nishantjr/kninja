@@ -12,7 +12,7 @@ KNinja (and Ninja's) build definitions form a labelled multigraph where:
 """
 
 import kninja.ninja.ninja_syntax
-import copy
+from copy import deepcopy
 import glob as glob_module
 import os
 import sys
@@ -84,13 +84,17 @@ class Target():
     @staticmethod
     def to_paths(value):
         if value is None:
-            return None
+            return []
         if isinstance(value, list):
-            return list(map(Target.to_paths, value))
+            ret = []
+            for v in value:
+                ret += Target.to_paths(v)
+            return ret
         if isinstance(value, str):
-            return value
+            return [value]
         if isinstance(value, Target):
-            return value.path
+            return [value.path]
+        assert False, type(value)
 
 class KDefinition():
     def __init__( self
@@ -230,18 +234,18 @@ class Rule():
         self._pool             = None
         self._variables        = {}
 
-    def ext(self, ext)                          : r = copy.copy(self); r._ext               = ext              ; return r
-    def output(self, output)                    : r = copy.copy(self); r._output            = output           ; return r
-    def implicit(self, implicit)                : r = copy.copy(self); r._implicit         += implicit         ; return r
-    def implicit_outputs(self, implicit_outputs): r = copy.copy(self); r._implicit_outputs += implicit_outputs ; return r
-    def pool(self, pool)                        : r = copy.copy(self); r._pool              = pool             ; return r
+    def ext(self, ext)                          : r = deepcopy(self); r._ext               = ext              ; return r
+    def output(self, output)                    : r = deepcopy(self); r._output            = output           ; return r
+    def implicit(self, implicit)                : r = deepcopy(self); r._implicit += Target.to_paths(implicit); return r
+    def implicit_outputs(self, implicit_outputs): r = deepcopy(self); r._implicit_outputs += implicit_outputs ; return r
+    def pool(self, pool)                        : r = deepcopy(self); r._pool              = pool             ; return r
     def variables(self, **variables):
-        r = copy.copy(self)
+        r = deepcopy(self)
         # Merge the two dictionaries
         r._variables = { **self._variables, **variables }
         return r
     def variable(self, name, value):
-        r = copy.copy(self)
+        r = deepcopy(self)
         r._variables[name] = value
         return r
 
@@ -329,7 +333,7 @@ class KProject(ninja.ninja_syntax.Writer):
             assert(type(source) == Target)
             return source
         main = target_from_source(main)
-        other = map(target_from_source, other)
+        other = list(map(target_from_source, other))
 
         kompiled_dir =  os.path.join(directory, basename_no_ext(main.path) + '-kompiled')
         output = None
